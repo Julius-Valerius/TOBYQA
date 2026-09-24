@@ -125,10 +125,9 @@ To prevent ill-conditioned sample geometries from inflating the trace of $P_{\ma
 
 Algorithm~\ref{alg:tobyqa} summarizes the resulting procedure. The default algorithmic parameters are set to $\Delta_0=2$, $\gamma_1=2$, $\gamma_2=1.2$, $\eta=0.75$, $\kappa_{\mathrm{tol}}=3$, and $\kappa_{\mathrm{geom}}=5$. In practical implementation, standard safeguards against floating-point underflow and severe ill-conditioning are applied (e.g., bounding $\rho$ within $[10^2, 10^{14}]$ and lower-bounding scale estimates by machine precision).
 
-\refstepcounter{algorithm}
+\begin{algorithm}[t]
+\caption{The TOBYQA Algorithm}
 \label{alg:tobyqa}
-\noindent\textbf{Algorithm~\thealgorithm. The TOBYQA Algorithm}
-\par\nobreak\smallskip
 \begin{algorithmic}[1]
 \REQUIRE Initial point $\vct{x}_0\in\mathbb{R}^n$, initial radius $\Delta_0>0$, noise variance $R_{\mathrm{obs}}$, parameters $\gamma_1,\gamma_2>1$, $\eta\in(0,1)$, tolerances $\kappa_{\mathrm{tol}},\kappa_{\mathrm{geom}}>0$.
 \ENSURE Approximate stationary point $\vct{x}^*$.
@@ -158,4 +157,5 @@ Algorithm~\ref{alg:tobyqa} summarizes the resulting procedure. The default algor
   \STATE Insert $(\vct{x}_k+\vct{s}_k,t_{\mathrm{new}},F_{\mathrm{new}})$ to form $\mathcal Y_{k+1}$.
 \ENDFOR
 \end{algorithmic}
+\end{algorithm}
 
