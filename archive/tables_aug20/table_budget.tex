@@ -1,0 +1,12 @@
+\begin{table}[t]\centering\small
+\caption{Budget utilisation. A solver that stops before the budget is exhausted has declared convergence; under noise this is the dominant failure mode of heuristic stopping rules.}
+\label{tab:budget}
+\begin{tabular}{lrrr}\toprule
+Solver & median evals used & \% of budget & \% runs stopping early \\\midrule
+\textbf{TOBYQA} & 1500 & 100.0 & 8.5 \\
+NEWUOA & 185 & 12.3 & 99.0 \\
+BOBYQA & 147 & 9.8 & 99.8 \\
+DFO-LS & 1500 & 100.0 & 25.0 \\
+Nelder--Mead & 1500 & 100.0 & 0.0 \\
+BFGS (FD) & 180 & 12.0 & 99.6 \\
+\bottomrule\end{tabular}\end{table}

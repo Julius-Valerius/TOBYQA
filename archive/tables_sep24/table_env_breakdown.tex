@@ -1,0 +1,18 @@
+\begin{table}[t]
+\centering\footnotesize
+\setlength{\tabcolsep}{3pt}
+\caption{Solve rates (\%) at $\tau=10^{-3}$ broken down by drift regime, pooled over all $n$ and seeds.}
+\label{tab:env-breakdown}
+\begin{tabular}{lrrrrrrr}
+\toprule
+Solver & Chaotic & Hetero & Linear & MultCoupling & PeriodicAdd & PeriodicMult & Static \\
+\midrule
+\textbf{TOBYQA} & 56.0 & 50.1 & 64.9 & 56.5 & 56.2 & 59.2 & 57.9 \\
+NEWUOA & 10.4 & 11.6 & 10.1 & 29.4 & 14.7 & 20.1 & 24.9 \\
+BOBYQA & 12.4 & 9.1 & 9.6 & 21.0 & 12.3 & 17.3 & 20.8 \\
+Py-BOBYQA & 14.2 & 3.0 & 4.0 & 55.4 & 19.3 & 42.1 & 59.3 \\
+Nelder--Mead & 1.1 & 0.0 & 0.6 & 12.3 & 3.1 & 6.3 & 10.9 \\
+BFGS (FD) & 1.9 & 0.0 & 0.4 & 0.3 & 0.8 & 0.8 & 0.3 \\
+\bottomrule
+\end{tabular}
+\end{table}

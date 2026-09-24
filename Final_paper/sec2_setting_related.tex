@@ -1,0 +1,161 @@
+\section{The TOBYQA Algorithm}
+\label{sec:algorithm}
+
+This section describes the formulation of the TOBYQA algorithm, detailing the soft-constrained quadratic model, the cubic regularization step, and the algorithmic procedure.
+
+\subsection{The Soft-Constrained Quadratic Model}
+\label{sec:kkt-derivation}
+
+We start with the model-based derivative-free framework used by NEWUOA~\cite{Powell2006NEWUOA}. At each iteration, NEWUOA maintains $m$ interpolation points around the current iterate and builds a quadratic model $Q \approx f$. The coefficients of $Q$---the symmetric Hessian, the gradient, and the constant term---have $(n+1)(n+2)/2$ degrees of freedom. Determining all coefficients from the interpolation equations $Q(\vct{x}_i) = F_i$, $i = 1, \dots, (n+1)(n+2)/2$, therefore requires a number of evaluations that grows quadratically with $n$. Powell instead proposed using fewer interpolation points~\cite{Powell2004LeastFrobenius}; NEWUOA commonly uses $m = 2n+1$. The interpolation conditions determine the constant and linear coefficients and provide partial curvature information, while the remaining freedom in the quadratic part is resolved by
+\[
+  \min_{Q}\; \|\nabla^2 Q - \nabla^2 Q_{\mathrm{prev}}\|_F
+  \quad \text{subject to} \quad Q(\vct{x}_i) = F_i, \quad i = 1, \dots, m,
+\]
+which selects, among the quadratics interpolating the samples, the model whose Hessian is closest to that of the previous iteration. Under standard poisedness conditions, this minimum-Frobenius-norm construction yields a unique model. The choice $m=O(n)$ also limits the temporal span of the interpolation set. Theorem~\ref{thm:nonlinear-drift} relates that span to the recovery bias under nonlinear drift.
+
+This interpolation system does not account for the observation channel~\eqref{eq:oracle_intro}. Because the samples are collected at different times, a static quadratic model can absorb temporal variation into its spatial coefficients. In addition, the hard conditions $Q(\vct{x}_i) = F_i$ pass observation noise directly into the fitted coefficients. TOBYQA addresses both effects by adding a time column to the model and replacing hard interpolation with a penalized fit.
+
+At iteration $k$, let $\vct{x}_k$ denote the current center and $t_k$ the timestamp at which it was evaluated. The algorithm maintains $m = 2n+1$ time-stamped samples in the active set $\mathcal{Y}_k$. For each $(\vct{x}_i,t_i,F_i)\in\mathcal{Y}_k$, define the spatial displacement $\vct{d}_i = \vct{x}_i - \vct{x}_k$ and temporal offset $\theta_i = t_i - t_k$. The center sample has $\theta_i=0$; the remaining offsets record the relative query times and may have either sign when the current center is not the most recently evaluated sample. Around the center $\vct{x}_k$, we seek a local quadratic-plus-linear-drift surrogate model
+\begin{equation}\label{eq:Q-model}
+  Q_k(\vct{x},t) \;=\; c + \vct{g}^{\!\top}(\vct{x} - \vct{x}_k) + \tfrac{1}{2}(\vct{x} - \vct{x}_k)^{\!\top}G\,(\vct{x} - \vct{x}_k) + \gamma\,(t - t_k),
+\end{equation}
+with unknowns $c\in\mathbb{R}$, $\vct{g}\in\mathbb{R}^n$, symmetric Hessian $G = G^\top\in\mathbb{R}^{n\times n}$, and temporal coefficient $\gamma\in\mathbb{R}$. Here $\gamma$ describes the local rate of change of the observation channel. Because it is estimated together with $(c,\vct{g},G)$, variation that is linear in time is represented explicitly rather than folded into the spatial model.
+
+The model is determined by the variational problem
+\begin{equation}\label{eq:soft-obj}
+  \min_{c,\,\vct{g},\,G=G^\top,\,\gamma}\;
+  \tfrac{1}{4}\|G\|_F^2
+  \;+\;
+  \tfrac{\rho}{2}\sum_{i=1}^{m}
+  \bigl(Q_k(\vct{x}_i, t_i) - F_i\bigr)^2,
+\end{equation}
+where $\rho>0$ controls the balance between curvature regularization and data fitting. The Frobenius penalty favors a model with modest curvature, while the least-squares term accommodates noise by allowing the observations to be fitted inexactly. We regularize $G$ itself, rather than its change from the preceding model, because the preceding curvature was fitted on an earlier temporal baseline. With the factor $1/4$, the KKT reduction below produces the classical kernel $A_{ij}=\tfrac{1}{2}(\vct{d}_i^\top \vct{d}_j)^2$.
+
+Introduce the residuals $\xi_i:=F_i-Q_k(\vct{x}_i,t_i)$. Then~\eqref{eq:soft-obj} is equivalently written as
+\begin{equation}\label{eq:soft-constrained}
+  \min_{c,\,\vct{g},\,G=G^\top,\,\gamma,\,\vct{\xi}}\;
+  \tfrac{1}{4}\|G\|_F^2 + \tfrac{\rho}{2}\sum_{i=1}^m \xi_i^2
+  \quad \text{s.t.} \quad Q_k(\vct{x}_i, t_i) + \xi_i = F_i, \;\; i = 1, \dots, m,
+\end{equation}
+Attaching Lagrange multipliers $\lambda_i$ to the observation constraints yields the Lagrangian
+\begin{equation}\label{eq:lagrangian}
+  \mathcal{L}(c, \vct{g}, G, \gamma, \vct{\xi}, \vct{\lambda})
+  \;=\;
+  \tfrac{1}{4}\|G\|_F^2 + \tfrac{\rho}{2}\sum_{i=1}^m \xi_i^2
+  - \sum_{i=1}^m \lambda_i \Bigl(Q_k(\vct{x}_i, t_i) + \xi_i - F_i\Bigr).
+\end{equation}
+Setting the partial derivatives of $\mathcal{L}$ with respect to the primal variables to zero yields the KKT stationarity conditions:
+\begin{align}
+  \nabla_G \mathcal{L} = 0 &\implies G \;=\; \sum_{i=1}^m \lambda_i\,\vct{d}_i\,\vct{d}_i^{\!\top}, \label{eq:stat-G} \\
+  \nabla_c \mathcal{L} = 0 &\implies \sum_{i=1}^m \lambda_i \;=\; 0, \label{eq:stat-c} \\
+  \nabla_{\vct{g}} \mathcal{L} = 0 &\implies \sum_{i=1}^m \lambda_i \vct{d}_i \;=\; \vct{0}, \label{eq:stat-g} \\
+  \nabla_\gamma \mathcal{L} = 0 &\implies \sum_{i=1}^m \lambda_i \theta_i \;=\; 0, \label{eq:stat-gamma} \\
+  \nabla_{\xi_i} \mathcal{L} = 0 &\implies \rho\,\xi_i \;=\; \lambda_i \iff \xi_i \;=\; \tfrac{1}{\rho}\lambda_i. \label{eq:stat-xi}
+\end{align}
+The relation $\lambda_i=\rho\xi_i$ ties the multipliers directly to the residuals. The remaining conditions state that $\vct{\lambda}$ is orthogonal to the constant, spatial-linear, and temporal-linear columns of the model. In particular, $\sum_i\lambda_i\theta_i=0$ is the extra condition introduced by the time column. It separates a linear temporal component from the spatial fit and leads to the drift-decoupling result in Section~\ref{sec:properties}.
+
+Substituting $\xi_i = \lambda_i/\rho$ and~\eqref{eq:stat-G} into the constraint equations gives, for each $i = 1, \dots, m$, the interpolation relation
+\begin{equation}\label{eq:row-i}
+  \tfrac{1}{2}\sum_{j=1}^m \lambda_j (\vct{d}_i^\top \vct{d}_j)^2 + c + \vct{d}_i^\top \vct{g} + \gamma \theta_i + \tfrac{1}{\rho}\lambda_i \;=\; F_i.
+\end{equation}
+Combining~\eqref{eq:row-i} with the three orthogonality constraints~\eqref{eq:stat-c}, \eqref{eq:stat-g}, and~\eqref{eq:stat-gamma}, we obtain the augmented KKT linear system
+\begin{equation}\label{eq:tobyqa-kkt}
+  \begin{bmatrix}
+     A + \tfrac{1}{\rho}I_m & \mathbf{1}_m & D & \vct{\theta} \\
+    \mathbf{1}_m^{\!\top} & 0 & 0 & 0 \\
+    D^{\!\top} & 0 & 0 & 0 \\
+    \vct{\theta}^{\!\top} & 0 & 0 & 0
+  \end{bmatrix}
+  \begin{bmatrix}\vct{\lambda}\\c\\\vct{g}\\\gamma\end{bmatrix}
+  \;=\;
+  \begin{bmatrix}\vct{F}\\0\\\vct{0}\\0\end{bmatrix},
+\end{equation}
+whose coefficient matrix we denote by $M$. Here $A \in \mathbb{R}^{m\times m}$ has entries $A_{ij} = \tfrac{1}{2}(\vct{d}_i^\top \vct{d}_j)^2$, $D \in \mathbb{R}^{m\times n}$ has rows $\vct{d}_i^\top$, $\vct{\theta} = (\theta_1, \dots, \theta_m)^\top \in \mathbb{R}^m$, $\mathbf{1}_m$ is the all-ones vector, and $\vct{F} = (F_1, \dots, F_m)^\top$. We denote the augmented constraint block by
+\begin{equation}\label{eq:Xaug-def}
+  X_{\mathrm{aug}} \;:=\;
+  \begin{bmatrix}\mathbf{1}_m & D & \vct{\theta}\end{bmatrix}
+  \;\in\;\mathbb{R}^{m\times(n+2)},
+\end{equation}
+whose first $n+1$ columns form the constraint block of the classical NEWUOA system, and whose last column $\vct{\theta}$ provides the temporal extension that enables the joint recovery of the drift rate $\gamma$.
+
+\subsection{Cubic Regularization Step and Step Acceptance}
+\label{sec:arc-decision}
+
+Given the recovered gradient $\vct{g}_k$, TOBYQA computes the trial step from
+\begin{equation}\label{eq:arc-subproblem}
+  \min_{\vct{s} \in \mathbb{R}^n} m_k(\vct{s}) \;:=\; \vct{g}_k^\top \vct{s} + \tfrac{\sigma_k}{3} \|\vct{s}\|_2^3,
+\end{equation}
+where $\sigma_k>0$ controls the step length. Problem~\eqref{eq:arc-subproblem} has the closed-form solution
+\begin{equation}\label{eq:closed-form-step}
+  \vct{s}_k \;=\; -\frac{\vct{g}_k}{\sqrt{\sigma_k \|\vct{g}_k\|_2}},
+  \qquad
+  \|\vct{s}_k\|_2 \;=\; \sqrt{\frac{\|\vct{g}_k\|_2}{\sigma_k}},
+\end{equation}
+whose computation requires only $O(n)$ arithmetic operations. The predicted reduction used in the acceptance test below is the decrease of the \emph{linear} part of the model, which excludes the cubic regularization term:
+\begin{equation}\label{eq:pred-def}
+  \mathrm{Pred}_k \;:=\; -\,\vct{g}_k^{\top} \vct{s}_k \;=\; \|\vct{g}_k\|_2^{3/2} \sigma_k^{-1/2} \;=\; \|\vct{g}_k\|_2 \|\vct{s}_k\|_2.
+\end{equation}
+
+Evaluating the candidate point $\vct{x}_k + \vct{s}_k$ through the observation channel at timestamp $t_{\mathrm{new}}$ returns $F_{\mathrm{new}} := F(\vct{x}_k + \vct{s}_k, t_{\mathrm{new}})$. To account for the channel variation over the query interval $\Delta t = t_{\mathrm{new}} - t_k$, we use the recovered temporal coefficient $\gamma$ to define the \emph{drift-compensated actual reduction}:
+\begin{equation}\label{eq:ared-def}
+  \mathrm{Ared}_k \;:=\; (F_k - F_{\mathrm{new}}) + \gamma\,(t_{\mathrm{new}} - t_k),
+\end{equation}
+where $F_k := F(\vct{x}_k, t_k)$ is the observation at the current center. Since $\mathrm{Ared}_k$ contains two independent observation noise terms---$\varepsilon(\vct{x}_k, t_k)$ in $F_k$ and $\varepsilon(\vct{x}_k + \vct{s}_k, t_{\mathrm{new}})$ in $F_{\mathrm{new}}$---its stochastic component has variance $2 R_{\mathrm{obs}}$. We therefore use the noise-gated acceptance criterion
+\begin{equation}\label{eq:noise-gate}
+  \mathrm{Ared}_k \;\ge\; -\frac{\kappa_{\mathrm{tol}}}{2} \sqrt{2 R_{\mathrm{obs}}},
+\end{equation}
+where $R_{\mathrm{obs}} = \sigma_\varepsilon^2$ is the observation noise variance and $\kappa_{\mathrm{tol}} > 0$ is a stationarity tolerance. When~\eqref{eq:noise-gate} holds, the center advances to $\vct{x}_{k+1} = \vct{x}_k + \vct{s}_k$ with $t_{k+1} = t_{\mathrm{new}}$ and $F_{k+1} = F_{\mathrm{new}}$. If the ratio $r_k := \mathrm{Ared}_k / \mathrm{Pred}_k$ exceeds $\eta = 0.75$, the regularization parameter is decreased according to $\sigma_{k+1} = \sigma_k / \gamma_1$, where $\gamma_1 > 1$; otherwise it is held fixed. If~\eqref{eq:noise-gate} is violated, the step is rejected, the incumbent center remains unchanged ($(\vct{x}_{k+1}, t_{k+1}, F_{k+1}) = (\vct{x}_k, t_k, F_k)$), and $\sigma_{k+1} = \gamma_2 \sigma_k$ with $\gamma_2 > 1$.
+
+Each trial evaluation is retained in the active set. To keep its size fixed at $m=2n+1$, the sample at the current center is protected and the oldest of the remaining samples is replaced. The resulting temporal span $\tau_{\max}:=\max_i|t_i-t_k|$ appears in the nonlinear-drift error bound of Theorem~\ref{thm:nonlinear-drift}.
+
+Finally, the algorithm terminates based on a statistical stationarity criterion derived from the posterior covariance of the KKT solve. By Proposition~\ref{prop:solvability} below, the primal parameters admit the explicit representation $(c, \vct{g}^\top, \gamma)^\top = \Pi \vct{F}$ with the recovery operator $\Pi = S^{-1} X_{\mathrm{aug}}^\top K^{-1}$, where $S = X_{\mathrm{aug}}^\top K^{-1} X_{\mathrm{aug}}$ and $K = A + \tfrac{1}{\rho} I_m$. If the observation noise were the only error source, i.e., if $\vct{F}$ carried the white covariance $R_{\mathrm{obs}} I_m$, the recovered parameters would inherit the covariance
+\begin{equation}\label{eq:pnorm-def}
+  \mathrm{Cov}\bigl(\Pi \vct{F}\bigr)
+  \;=\; R_{\mathrm{obs}}\, S^{-1} \bigl(X_{\mathrm{aug}}^\top K^{-2} X_{\mathrm{aug}}\bigr) S^{-1}
+  \;=:\; R_{\mathrm{obs}}\, P_{\mathrm{norm}},
+\end{equation}
+  a normalized covariance matrix that scales linearly with the noise level; writing $B := X_{\mathrm{aug}}^\top K^{-2} X_{\mathrm{aug}}$, we have $P_{\mathrm{norm}} = S^{-1} B S^{-1}$. In particular, the covariance contribution to the estimated spatial gradient is $R_{\mathrm{obs}} [P_{\mathrm{norm}}]_{gg}$. The algorithm declares convergence when the recovered gradient norm falls below the corresponding uncertainty level:
+\begin{equation}\label{eq:stopping-rule}
+  \|\vct{g}_k\|_2 \;<\; \kappa_{\mathrm{tol}} \sqrt{\mathrm{tr}\bigl(R_{\mathrm{obs}} [P_{\mathrm{norm}}]_{gg}\bigr)}.
+\end{equation}
+To prevent ill-conditioned sample geometries from inflating the trace of $P_{\mathrm{norm}}$ and triggering premature termination, condition~\eqref{eq:stopping-rule} is evaluated only when $\mathrm{tr}(P_{\mathrm{norm}}) \le \kappa_{\mathrm{geom}} \cdot \mathrm{tr}(P_{\mathrm{baseline}})$ (with default $\kappa_{\mathrm{geom}} = 5$), where $P_{\mathrm{baseline}}$ is computed at the initial coordinate configuration. The iteration also terminates if the trial step stagnates below numerical precision: $\|\vct{s}_k\|_2 < 10^{-14} \max(\|\vct{x}_k\|_2, 1)$.
+
+\subsection{Algorithm Summary}
+\label{sec:algo-complete}
+
+Algorithm~\ref{alg:tobyqa} summarizes the resulting procedure. The default algorithmic parameters are set to $\Delta_0=2$, $\gamma_1=2$, $\gamma_2=1.2$, $\eta=0.75$, $\kappa_{\mathrm{tol}}=3$, and $\kappa_{\mathrm{geom}}=5$. In practical implementation, standard safeguards against floating-point underflow and severe ill-conditioning are applied (e.g., bounding $\rho$ within $[10^2, 10^{14}]$ and lower-bounding scale estimates by machine precision).
+
+\refstepcounter{algorithm}
+\label{alg:tobyqa}
+\noindent\textbf{Algorithm~\thealgorithm. The TOBYQA Algorithm}
+\par\nobreak\smallskip
+\begin{algorithmic}[1]
+\REQUIRE Initial point $\vct{x}_0\in\mathbb{R}^n$, initial radius $\Delta_0>0$, noise variance $R_{\mathrm{obs}}$, parameters $\gamma_1,\gamma_2>1$, $\eta\in(0,1)$, tolerances $\kappa_{\mathrm{tol}},\kappa_{\mathrm{geom}}>0$.
+\ENSURE Approximate stationary point $\vct{x}^*$.
+\STATE Evaluate initial stencil $\{\vct{x}_0\}\cup\{\vct{x}_0\pm\Delta_0\vct{e}_j\}_{j=1}^n$ at sequential timestamps to form $\mathcal Y_0$; record initial center $(\vct{x}_0, t_0, F_0)$ with $F_0 := F(\vct{x}_0, t_0)$.
+\STATE Set spread $s_F\leftarrow\max_iF_i-\min_iF_i$, curvature scale $\widehat\sigma_H\leftarrow s_F/\Delta_0^2$, ridge parameter $\rho\leftarrow \widehat\sigma_H^2/R_{\mathrm{obs}}$, and initial cubic weight $\sigma_0\leftarrow s_F/\Delta_0^3$.
+\STATE Compute baseline covariance metric $P_{\mathrm{baseline}}$ from the KKT system on $\mathcal Y_0$.
+\FOR{$k = 0, 1, 2, \dots$}
+  \STATE Construct $A$, $\vct{\theta}$, and $X_{\mathrm{aug}}$; solve~\eqref{eq:tobyqa-kkt} for $(\vct{\lambda},c,\vct{g}_k,\gamma_k)$ and compute $P_{\mathrm{norm}}$.
+  \IF{$\|\vct{g}_k\|_2<\kappa_{\mathrm{tol}}\sqrt{\mathrm{tr}(R_{\mathrm{obs}}[P_{\mathrm{norm}}]_{gg})}$ \textbf{and} $\mathrm{tr}(P_{\mathrm{norm}})\le\kappa_{\mathrm{geom}}\,\mathrm{tr}(P_{\mathrm{baseline}})$}
+    \STATE \textbf{return} $\vct{x}_k$.
+  \ENDIF
+  \STATE Compute trial step $\vct{s}_k\leftarrow-\vct{g}_k/\sqrt{\sigma_k\|\vct{g}_k\|_2}$ and predicted reduction $\mathrm{Pred}_k\leftarrow-\vct{g}_k^\top \vct{s}_k$.
+  \STATE Query channel at candidate point $(\vct{x}_k+\vct{s}_k,t_{\mathrm{new}})$ to obtain $F_{\mathrm{new}}$.
+  \STATE Compute drift-compensated actual reduction $\mathrm{Ared}_k\leftarrow (F_k-F_{\mathrm{new}})+\gamma_k(t_{\mathrm{new}}-t_k)$ and ratio $r_k\leftarrow\mathrm{Ared}_k/\mathrm{Pred}_k$.
+  \IF{$\mathrm{Ared}_k \ge -\frac{\kappa_{\mathrm{tol}}}{2}\sqrt{2 R_{\mathrm{obs}}}$}
+    \STATE Set $(\vct{x}_{k+1}, t_{k+1}, F_{k+1}) \leftarrow (\vct{x}_k+\vct{s}_k, t_{\mathrm{new}}, F_{\mathrm{new}})$.
+    \IF{$r_k > \eta$}
+      \STATE $\sigma_{k+1}\leftarrow\sigma_k/\gamma_1$.
+    \ELSE
+      \STATE $\sigma_{k+1}\leftarrow\sigma_k$.
+    \ENDIF
+  \ELSE
+    \STATE Set $(\vct{x}_{k+1}, t_{k+1}, F_{k+1}) \leftarrow (\vct{x}_k, t_k, F_k)$.
+    \STATE $\sigma_{k+1}\leftarrow\gamma_2\sigma_k$.
+  \ENDIF
+  \STATE Remove from $\mathcal Y_k$ the oldest sample not located at $\vct{x}_{k+1}$.
+  \STATE Insert $(\vct{x}_k+\vct{s}_k,t_{\mathrm{new}},F_{\mathrm{new}})$ to form $\mathcal Y_{k+1}$.
+\ENDFOR
+\end{algorithmic}
+

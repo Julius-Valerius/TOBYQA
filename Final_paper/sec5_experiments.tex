@@ -1,0 +1,99 @@
+\section{Numerical Experiments}
+\label{sec:experiments}
+
+\noindent\textbf{Experimental Setup.}
+The benchmark testbed comprises $65$ scalable smooth unconstrained test problems from the Mor\'e--Wild benchmark set~\cite{MoreWild2009}, evaluated at dimensions $n \in \{6, 10, 20\}$ with $5$ random seeds controlling the observation noise realizations. Each problem is queried through one of the seven evaluation channels summarized in Table~\ref{tab:envs}. Channel amplitudes and observation noise variances are scaled proportionally to the initial function magnitude $s_0 = \max(|f(\vct{x}_0)|, 1)$, with relative noise scale $\sigma_\varepsilon = 10^{-3} s_0$. The temporal query index advances as $t \leftarrow t + 1$ on each oracle evaluation across all solvers.
+
+\begin{table}[t]
+  \centering\small
+  \caption{Observation drift channels used in the benchmark experiments. Here $s_0 = \max(|f(\vct{x}_0)|, 1)$, $t$ is the sequential oracle query index, and the Lorenz trajectory is generated with standard parameters $(s, r, b) = (10, 28, 8/3)$, initial state $(1,1,1)$, and integration step $0.01$.}
+  \label{tab:envs}
+  \begin{tabular}{lll}
+    \toprule
+    Channel & Analytical Form $\phi(f(\vct{x}), t)$ & Classification \\
+    \midrule
+    Static        & $f(\vct{x})$                                      & Baseline ($\beta = 0$) \\
+    LinearDrift   & $f(\vct{x}) + 0.01\,s_0\,t$                       & Affine drift (Theorem~\ref{thm:exact-decoupling}) \\
+    PeriodicAdd   & $f(\vct{x}) + 0.05\,s_0\sin(2\pi t/50)$           & $C^2$ bounded drift (Theorem~\ref{thm:nonlinear-drift}) \\
+    ChaoticDrift  & $f(\vct{x}) + 0.03\,s_0\,\mathrm{Lorenz}_x(t)$    & Chaotic dynamic drift \\
+    Hetero        & $f(\vct{x}) + 0.01\,s_0\,t\,(1+\tanh\|\vct{x}-\vct{x}_0\|)$   & Spatially coupled drift \\
+    MultCoupling  & $f(\vct{x})\cdot(1 + 10^{-4}t)$                   & Multiplicative drift \\
+    PeriodicMult  & $f(\vct{x})\cdot(1 + 0.05\sin(2\pi t/50))$        & Multiplicative oscillatory drift \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+We benchmark TOBYQA against representative classical and modern derivative-free solvers:
+\begin{enumerate}[\rm(i)]
+  \item \textbf{NEWUOA \& BOBYQA}~\cite{Powell2006NEWUOA,Powell2009BOBYQA}: Powell's classical quadratic interpolation solvers, executed via the PDFO library~\cite{RagonneauZhang2024};
+  \item \textbf{Py-BOBYQA}~\cite{CartisRoberts2019}: A modern noise-aware model-based derivative-free solver;
+  \item \textbf{Nelder--Mead}~\cite{NelderMead1965}: The classical heuristic simplex search method;
+  \item \textbf{BFGS (FD)}: Quasi-Newton BFGS using forward-difference gradient approximations ($h = 10^{-4}$).
+\end{enumerate}
+Every solver is allocated a maximum budget of $1500$ evaluations per instance. Performance is measured by evaluating every queried point on the noise-free static latent objective $f$. Following Mor\'e and Wild~\cite{MoreWild2009}, an instance is declared solved at accuracy tolerance $\tau \in \{10^{-1}, 10^{-3}, 10^{-5}, 10^{-7}\}$ if $\min_k f(\vct{x}_k) \le f_L + \tau(f(\vct{x}_0) - f_L)$, where $f_L$ is the global minimum achieved across all solvers.
+
+\subsection{Benchmark Comparison with Existing Solvers}
+\label{sec:bench-comparison}
+
+\input{tables/table_solve_rates}
+
+Table~\ref{tab:solve-rates} reports the overall solve rates across dimensions $n \in \{6, 10, 20\}$ and target tolerances $\tau \in \{10^{-1}, 10^{-3}, 10^{-5}, 10^{-7}\}$. Figure~\ref{fig:data-profile} displays the cumulative data profiles at tolerance $\tau = 10^{-3}$, and Figure~\ref{fig:rate-vs-tau} depicts the solve rate decay curves across tolerances spanning seven orders of magnitude.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=.72\textwidth]{data_profiles_tau1e3}
+  \caption{Data profiles at tolerance $\tau = 10^{-3}$: fraction of benchmark instances solved as a function of the number of function evaluations, pooled across all test problems, dimensions, and drift channels.}
+  \label{fig:data-profile}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=.72\textwidth]{solve_rate_vs_tau}
+  \caption{Solve rates as a function of convergence tolerance $\tau \in [10^{-7}, 10^{-1}]$, pooled across all benchmark configurations.}
+  \label{fig:rate-vs-tau}
+\end{figure}
+
+The numerical results show the following patterns:
+\begin{enumerate}[\rm(i)]
+  \item \textbf{Solve rates across tolerances:} TOBYQA has the highest solve rate at every reported tolerance and dimension (Table~\ref{tab:solve-rates}). At $\tau = 10^{-3}$, TOBYQA solves $70.2\%$ of instances at $n = 6$, $59.9\%$ at $n = 10$, and $41.7\%$ at $n = 20$, compared with $46.9\%/27.3\%/10.3\%$ for Py-BOBYQA, $20.5\%/17.5\%/13.8\%$ for NEWUOA, and $18.3\%/15.6\%/10.1\%$ for BOBYQA.
+  \item \textbf{Stationary interpolation versus temporal drift:} In the stationary environment (Static in Table~\ref{tab:env-breakdown}), Py-BOBYQA attains a $59.3\%$ solve rate, closely matching TOBYQA ($57.9\%$), while NEWUOA and BOBYQA reach $24.9\%$ and $20.8\%$. Under temporal drift, however, stationary model-based methods deteriorate sharply: Py-BOBYQA drops to $4.0\%$ on LinearDrift and $3.0\%$ on Hetero (versus $64.9\%$ and $50.1\%$ for TOBYQA), while NEWUOA and BOBYQA achieve only $9\%$--$15\%$ across additive drift channels. In these methods, unmodeled temporal drift enters the spatial quadratic model and distorts the search direction.
+  \item \textbf{Finite-difference BFGS under drift:} BFGS (FD) has low solve rates under the drifting, noisy channels. With $\sigma_\varepsilon = 10^{-3} s_0$ and finite-difference step $h = 10^{-4}$, the difference quotients amplify observation noise and incur an $O(\beta/h)$ bias under affine drift.
+  \item \textbf{Evaluation-budget use:} As shown in Table~\ref{tab:budget}, NEWUOA and BOBYQA return before exhausting the budget on $99.0\%$ and $99.8\%$ of runs, with median totals of $185$ and $147$ evaluations out of $1500$. Py-BOBYQA stops early on $24.2\%$ of runs with a median of $1500$ evaluations. In contrast, TOBYQA terminates early on only $8.5\%$ of runs, utilizing the available budget when progress continues and stopping via the posterior-covariance criterion~\eqref{eq:stopping-rule} when the estimated gradient uncertainty matches the noise threshold.
+\end{enumerate}
+
+\input{tables/table_env_breakdown}
+
+\input{tables/table_budget}
+
+\subsection{Ablation Studies and Curvature Treatment}
+\label{sec:ablations}
+
+Table~\ref{tab:ablation} reports an ablation study across the seven evaluation channels.
+
+\input{tables/table_ablation}
+
+\noindent\textbf{Impact of Drift Compensation.}
+In this ablation, the time-augmented KKT system is retained for spatial-gradient recovery, but its recovered coefficient is set to $\gamma=0$ in the acceptance statistic~\eqref{eq:ared-def}. The ablated variant is nearly unchanged on the Static channel ($56.0\%$ vs $57.9\%$), whereas its solve rate falls to $7.1\%$--$12.7\%$ across the additive drifting channels. The comparison isolates the practical contribution of drift compensation in the acceptance test.
+
+\noindent\textbf{Role of the Curvature Prior Kernel $A$.}
+Replacing the composite kernel $K = A + \rho^{-1} I_m$ with an unweighted ridge penalty $K = \rho^{-1} I_m$ (which treats residuals as independent white noise and ignores curvature correlation) reduces the solve rate from $57.9\%$ to $34.5\%$ on Static and from $64.9\%$ to $39.9\%$ on LinearDrift. This result is consistent with the statistical interpretation in Proposition~\ref{prop:kernel-stat}: the kernel $A_{ij} = \tfrac{1}{2}(\vct{d}_i^\top \vct{d}_j)^2$ accounts for correlated residual variation induced by unmodeled curvature.
+
+\noindent\textbf{Curvature Treatment: Zero or Interpolated Hessian.}
+The Zero-Hessian default of Section~\ref{sec:arc-decision} was adopted on identifiability grounds: at $m = 2n+1$ the $\tfrac{1}{2}n(n+1)$ quadratic coefficients are underdetermined. The benchmark data show, however, that the relative merit of the interpolated Hessian $H_k = \sum_i \lambda_i \vct{d}_i \vct{d}_i^\top$ varies with dimension in a way that this argument alone does not predict. Table~\ref{tab:hessian} isolates the two variants. At $n = 6$ the default is better at both tolerances ($70.2\%$ vs $62.4\%$ at $\tau = 10^{-3}$; $34.4\%$ vs $24.0\%$ at $\tau = 10^{-5}$), and the gap widens at the reduced budget of $450$ evaluations ($83.3\%$ vs $67.3\%$). At $n = 20$ the ordering reverses at every tolerance ($50.7\%$ vs $41.7\%$ at $\tau = 10^{-3}$; $38.9\%$ vs $26.2\%$ at $\tau = 10^{-5}$), and at the enlarged budget of $5000$ evaluations the interpolated variant also wins the paired comparison ($1229$ of $2275$ instances against $963$ for the default, $83$ ties). Because the two budget-shifted cells align the per-variable evaluation budget across dimensions, the reversal follows the dimension rather than the budget.
+
+\input{tables/table_hessian}
+
+The environment breakdown at $n = 20$ and budget $5000$ shows a drift-specific pattern: at $\tau = 10^{-3}$, the interpolated Hessian achieves higher solve rates on Static, Hetero, and LinearDrift ($84.4\%$ vs $60.8\%$ on Static), but lower rates on ChaoticDrift and PeriodicAdd ($54.5\%$ vs $72.1\%$ and $49.8\%$ vs $75.7\%$, respectively; at $\tau = 10^{-5}$, the corresponding rates are $39.0\%$ vs $67.2\%$ and $38.2\%$ vs $68.0\%$). The latter two channels contain nonlinear additive drift, which contributes to the recovery error bounded in Theorem~\ref{thm:nonlinear-drift}. The identifiability ratio $(2n+1)/(\tfrac{1}{2}n(n+1))$ decreases monotonically in $n$, yet the interpolated Hessian becomes more useful as $n$ grows, so underdetermination alone does not explain the reversal. We therefore retain the Zero-Hessian default and leave the dimension-dependent role of interpolated curvature as an open question (Section~\ref{sec:conclusion}). Powell's incremental update has solve rates of $12\%\sim 19\%$ across all channels (Table~\ref{tab:ablation}), consistent with the effect of carrying curvature information across changing temporal baselines.
+
+\phantomsection
+\subsection{Numerical Checks of the Drift-Recovery Results}
+\label{sec:numerical-verification}
+
+We conclude the experiments with two numerical checks of the results in Section~\ref{sec:properties}.
+
+\noindent\textbf{Affine-drift gradient invariance (Theorem~\ref{thm:exact-decoupling}).}
+We generated synthetic sample sets $\mathcal{Y}$ and added linear drift at rates $\beta \in \{1, 10^3, 10^6\}$. Relative to the drift-free baseline, the spatial gradient difference $\|\vct{g} - \vct{g}^{\mathrm{stat}}\|_2$ was $1.5 \times 10^{-13}$ at $\beta = 1$ and $5.5 \times 10^{-8}$ at $\beta = 10^6$, while the recovered temporal coefficient agreed with $\gamma^{\mathrm{stat}}+\beta$ to machine precision across all tested configurations.
+
+\noindent\textbf{Nonlinear-drift bias (Theorem~\ref{thm:nonlinear-drift}).}
+Under quadratic drift $\mu(t) = \tfrac{1}{2} L_\mu t^2$, we evaluated $|\gamma - \gamma^{\mathrm{stat}} - \mu'(t_k)|$ as a function of the active-set temporal span $\tau_{\max}$. Over an eightfold variation in $\tau_{\max}$, the empirical bias was approximately linear in $\tau_{\max}$, with correlation $r > 0.998$, consistent with the bound for the recovered temporal coefficient in Theorem~\ref{thm:nonlinear-drift}.
+

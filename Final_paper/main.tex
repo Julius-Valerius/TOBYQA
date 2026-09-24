@@ -1,0 +1,81 @@
+% SIAM article - compile: pdflatex main && bibtex main && pdflatex main && pdflatex main
+\documentclass[final]{siamart171218}
+
+\usepackage{amsfonts,amssymb}
+\usepackage{graphicx}
+\graphicspath{{figures/}}
+\usepackage{booktabs,multirow}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{enumerate}
+
+% Cleveref compatibility fix for latest TeX Live
+\makeatletter
+\def\cref@override@label@type#1#2{}
+\makeatother
+
+% Standard math commands
+\newcommand{\norm}[1]{\|#1\|}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\vct}[1]{\boldsymbol{#1}}
+
+% Remark-like and theorem-like environments not predefined by the class.
+\newsiamremark{remark}{Remark}
+\newsiamthm{assumption}{Assumption}
+
+\DeclareMathOperator{\rank}{rank}
+
+% Running headers and PDF metadata.
+\headers{TOBYQA for Noisy Time-Varying Derivative-Free Optimization}%
+        {H. Yao and P. Xie}
+
+\title{TOBYQA: A Time-Augmented Model-Based Method for
+  Derivative-Free Optimization under Noise and Temporal
+  Drift}
+
+\author{Haoyu Yao\thanks{School of Computer Science and Technology,
+    Xi'an Jiaotong University, Xi'an, China
+    (\mbox{\email{yaohaoyu@stu.xjtu.edu.cn}}).}
+  \and
+  Pengcheng Xie\thanks{Applied Mathematics and Computational Research
+    Division, Lawrence Berkeley National Laboratory, Berkeley, CA
+    (\email{pxie@lbl.gov}).  Corresponding author.}}
+
+\ifpdf
+\hypersetup{
+  pdftitle={TOBYQA: A Time-Augmented Model-Based Method for Derivative-Free Optimization under Noise and Temporal Drift},
+  pdfauthor={H. Yao and P. Xie}
+}
+\fi
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Derivative-free optimization (DFO) is challenging when the observation channel varies over time and evaluations are noisy. Conventional model-based methods assume stationary observations; under temporal drift, historical data biases gradient estimates and acceptance tests confound latent-objective decrease with temporal variation. We propose TOBYQA (Time-augmented Optimization BY Quadratic Approximation), a regularized model-based DFO framework that jointly incorporates spatial geometry and temporal variations within a single saddle-point interpolation system. TOBYQA augments the classical least-Frobenius-norm quadratic interpolation system with a linear-in-time drift term and a ridge regularization on the residual kernel, which accommodates noise and ensures well-posedness when the constraint block has full column rank, relaxing the geometric poisedness requirements of classical interpolation. We prove that under affine temporal drift, the recovered gradient is algebraically invariant to the drift rate for any noise scale and sample radius. This property leads to a drift-compensated acceptance test that subtracts the estimated temporal component from the observed reduction. Driven by an adaptive cubic regularization scheme with a closed-form step and a statistical stationarity stopping rule based on the posterior gradient covariance, TOBYQA achieves an oracle complexity of $O(\varepsilon^{-2})$. Benchmark evaluations across the seven evaluation channels show that, at tolerance $\tau=10^{-3}$, TOBYQA solves $70.2\%$, $59.9\%$, and $41.7\%$ of instances at $n=6$, $10$, and $20$, respectively, compared with $46.9\%$, $27.3\%$, and $13.8\%$ for the best-performing comparison method. These results demonstrate higher solve rates under temporal drift while retaining comparable performance in static environments.
+\end{abstract}
+
+\begin{keywords}
+derivative-free optimization, time-varying optimization, noisy
+optimization, cubic regularization, interpolation models, drift
+compensation
+\end{keywords}
+
+\begin{AMS}
+90C56, 90C30, 65K05
+\end{AMS}
+
+\input{sec1_introduction}
+\input{sec2_setting_related}
+\input{sec3_method}
+\input{sec4_5_complexity}
+\input{sec5_experiments}
+
+\input{sec6_conclusion}
+
+\phantomsection
+\bibliographystyle{siamplain}
+\bibliography{references}
+
+\end{document}

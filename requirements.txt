@@ -1,0 +1,8 @@
+# Core requirements for running TOBYQA
+numpy>=1.22.0
+scipy>=1.8.0
+matplotlib>=3.5.0
+
+# Optional requirements for running baseline comparison benchmarks:
+# pdfo>=2.0.0          # Powell's classical solvers (NEWUOA, BOBYQA) via PDFO
+# Py-BOBYQA>=1.4.0     # Noise-aware solver Py-BOBYQA

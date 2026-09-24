@@ -1,0 +1,356 @@
+% ===================================================================
+% references.bib — 统一键名版 (CamelCase 作者+年份)
+% 覆盖 sec1 / sec2 / sec3 / sec4_5 / sec5 全部引用键.
+% 替换旧 Latex/ 目录下的双键体系 (powell2006newuoa 等小写键全部废弃).
+% ===================================================================
+
+% ------------------- 模型驱动 DFO -------------------
+
+@incollection{Powell2006NEWUOA,
+  author    = {Powell, M. J. D.},
+  title     = {The {NEWUOA} software for unconstrained optimization
+               without derivatives},
+  booktitle = {Large-Scale Nonlinear Optimization},
+  editor    = {Di Pillo, G. and Roma, M.},
+  series    = {Nonconvex Optimization and Its Applications},
+  volume    = {83},
+  pages     = {255--297},
+  publisher = {Springer},
+  address   = {Boston, MA},
+  year      = {2006},
+  doi       = {10.1007/0-387-30065-1_16}
+}
+
+@techreport{Powell2009BOBYQA,
+  author      = {Powell, M. J. D.},
+  title       = {The {BOBYQA} algorithm for bound constrained
+                 optimization without derivatives},
+  institution = {Department of Applied Mathematics and Theoretical
+                 Physics, University of Cambridge},
+  number      = {DAMTP 2009/NA06},
+  address     = {Cambridge, UK},
+  year        = {2009}
+}
+
+@article{Powell2004LeastFrobenius,
+  author  = {Powell, M. J. D.},
+  title   = {Least {F}robenius norm updating of quadratic models that
+             satisfy interpolation conditions},
+  journal = {Mathematical Programming},
+  volume  = {100},
+  number  = {1},
+  pages   = {183--215},
+  year    = {2004},
+  doi     = {10.1007/s10107-003-0490-7}
+}
+
+@book{ConnScheinbergVicente2009,
+  author    = {Conn, Andrew R. and Scheinberg, Katya and
+               Vicente, Lu{\'i}s N.},
+  title     = {Introduction to Derivative-Free Optimization},
+  series    = {MPS-SIAM Series on Optimization},
+  publisher = {SIAM},
+  address   = {Philadelphia, PA},
+  year      = {2009},
+  doi       = {10.1137/1.9780898718768}
+}
+
+@book{AudetHare2017,
+  author    = {Audet, Charles and Hare, Warren},
+  title     = {Derivative-Free and Blackbox Optimization},
+  series    = {Springer Series in Operations Research and Financial
+               Engineering},
+  publisher = {Springer},
+  address   = {Cham},
+  year      = {2017},
+  doi       = {10.1007/978-3-319-68913-5}
+}
+
+@article{LarsonMenickellyWild2019,
+  author  = {Larson, Jeffrey and Menickelly, Matt and
+             Wild, Stefan M.},
+  title   = {Derivative-free optimization methods},
+  journal = {Acta Numerica},
+  volume  = {28},
+  pages   = {287--404},
+  year    = {2019},
+  doi     = {10.1017/S0962492919000060}
+}
+
+@article{MoreWild2009,
+  author  = {Mor{\'e}, Jorge J. and Wild, Stefan M.},
+  title   = {Benchmarking derivative-free optimization algorithms},
+  journal = {SIAM Journal on Optimization},
+  volume  = {20},
+  number  = {1},
+  pages   = {172--191},
+  year    = {2009},
+  doi     = {10.1137/080724083}
+}
+
+@article{CartisRoberts2019,
+  author  = {Cartis, Coralia and Fiala, Jan and Marteau, Benjamin and
+             Roberts, Lindon},
+  title   = {Improving the flexibility and robustness of model-based
+             derivative-free optimization solvers},
+  journal = {ACM Transactions on Mathematical Software},
+  volume  = {45},
+  number  = {3},
+  pages   = {32:1--32:41},
+  year    = {2019},
+  doi     = {10.1145/3338517}
+}
+
+@article{ChenMenickellyScheinberg2018,
+  author  = {Chen, Ruobing and Menickelly, Matt and
+             Scheinberg, Katya},
+  title   = {Stochastic optimization using a trust-region method and
+             random models},
+  journal = {Mathematical Programming},
+  volume  = {169},
+  number  = {2},
+  pages   = {447--487},
+  year    = {2018},
+  doi     = {10.1007/s10107-017-1141-8}
+}
+
+@article{BlanchetCartisMenickellyScheinberg2019,
+  author  = {Blanchet, Jose and Cartis, Coralia and Menickelly, Matt
+             and Scheinberg, Katya},
+  title   = {Convergence rate analysis of a stochastic trust-region
+             method via supermartingales},
+  journal = {INFORMS Journal on Optimization},
+  volume  = {1},
+  number  = {2},
+  pages   = {92--119},
+  year    = {2019},
+  doi     = {10.1287/ijoo.2019.0016}
+}
+
+@article{RagonneauZhang2024,
+  author  = {Ragonneau, Tom M. and Zhang, Zaikun},
+  title   = {{PDFO}: a cross-platform package for {P}owell's
+             derivative-free optimization solvers},
+  journal = {Mathematical Programming Computation},
+  volume  = {16},
+  number  = {4},
+  pages   = {535--559},
+  year    = {2024},
+  doi     = {10.1007/s12532-024-00257-9}
+}
+
+@article{NelderMead1965,
+  author  = {Nelder, J. A. and Mead, R.},
+  title   = {A simplex method for function minimization},
+  journal = {The Computer Journal},
+  volume  = {7},
+  number  = {4},
+  pages   = {308--313},
+  year    = {1965},
+  doi     = {10.1093/comjnl/7.4.308}
+}
+
+% ------------------- 时变 / 在线优化 -------------------
+
+@article{Fazlyab2018,
+  author  = {Fazlyab, Mahyar and Paternain, Santiago and
+             Preciado, Victor M. and Ribeiro, Alejandro},
+  title   = {Prediction-correction interior-point method for
+             time-varying convex optimization},
+  journal = {IEEE Transactions on Automatic Control},
+  volume  = {63},
+  number  = {7},
+  pages   = {1973--1986},
+  year    = {2018},
+  doi     = {10.1109/TAC.2017.2760256}
+}
+
+@article{SimonettoDallAnese2020,
+  author  = {Simonetto, Andrea and Dall'Anese, Emiliano and
+             Paternain, Santiago and Leus, Geert and
+             Giannakis, Georgios B.},
+  title   = {Time-varying convex optimization: time-structured
+             algorithms and applications},
+  journal = {Proceedings of the IEEE},
+  volume  = {108},
+  number  = {11},
+  pages   = {2032--2048},
+  year    = {2020},
+  doi     = {10.1109/JPROC.2020.3003156}
+}
+
+@inproceedings{Zinkevich2003,
+  author    = {Zinkevich, Martin},
+  title     = {Online convex programming and generalized infinitesimal
+               gradient ascent},
+  booktitle = {Proceedings of the 20th International Conference on
+               Machine Learning (ICML)},
+  pages     = {928--936},
+  address   = {Washington, DC},
+  year      = {2003}
+}
+
+@book{Branke2002,
+  author    = {Branke, J{\"u}rgen},
+  title     = {Evolutionary Optimization in Dynamic Environments},
+  series    = {Genetic Algorithms and Evolutionary Computation},
+  volume    = {3},
+  publisher = {Kluwer Academic Publishers},
+  address   = {Boston, MA},
+  year      = {2002},
+  doi       = {10.1007/978-1-4615-0911-0}
+}
+
+% ------------------- 三次正则化与复杂度 -------------------
+
+@article{NesterovPolyak2006,
+  author  = {Nesterov, Yurii and Polyak, B. T.},
+  title   = {Cubic regularization of {N}ewton method and its global
+             performance},
+  journal = {Mathematical Programming},
+  volume  = {108},
+  number  = {1},
+  pages   = {177--205},
+  year    = {2006},
+  doi     = {10.1007/s10107-006-0706-8}
+}
+
+@article{CartisGouldToint2011ARC,
+  author  = {Cartis, Coralia and Gould, Nicholas I. M. and
+             Toint, Philippe L.},
+  title   = {Adaptive cubic regularisation methods for unconstrained
+             optimization. {P}art {I}: motivation, convergence and
+             numerical results},
+  journal = {Mathematical Programming},
+  volume  = {127},
+  number  = {2},
+  pages   = {245--295},
+  year    = {2011},
+  doi     = {10.1007/s10107-009-0286-5}
+}
+
+@article{CartisGouldToint2011ARC2,
+  author  = {Cartis, Coralia and Gould, Nicholas I. M. and
+             Toint, Philippe L.},
+  title   = {Adaptive cubic regularisation methods for unconstrained
+             optimization. {P}art {II}: worst-case function- and
+             derivative-evaluation complexity},
+  journal = {Mathematical Programming},
+  volume  = {130},
+  number  = {2},
+  pages   = {295--319},
+  year    = {2011},
+  doi     = {10.1007/s10107-009-0337-y}
+}
+
+@article{BellaviaGurioliMoriniToint2019,
+  author  = {Bellavia, Stefania and Gurioli, Gianmarco and
+             Morini, Benedetta and Toint, Philippe L.},
+  title   = {Adaptive regularization algorithms with inexact
+             evaluations for nonconvex optimization},
+  journal = {SIAM Journal on Optimization},
+  volume  = {29},
+  number  = {4},
+  pages   = {2881--2915},
+  year    = {2019},
+  doi     = {10.1137/18M1226282}
+}
+
+@article{CarmonDuchiHinderSidford2020,
+  author  = {Carmon, Yair and Duchi, John C. and Hinder, Oliver and
+             Sidford, Aaron},
+  title   = {Lower bounds for finding stationary points {I}},
+  journal = {Mathematical Programming},
+  volume  = {184},
+  number  = {1--2},
+  pages   = {71--120},
+  year    = {2020},
+  doi     = {10.1007/s10107-019-01406-y}
+}
+
+% ------------------- 统计与回归 -------------------
+
+@article{FrischWaugh1933,
+  author  = {Frisch, Ragnar and Waugh, Frederick V.},
+  title   = {Partial time regressions as compared with individual
+             trends},
+  journal = {Econometrica},
+  volume  = {1},
+  number  = {4},
+  pages   = {387--401},
+  year    = {1933},
+  doi     = {10.2307/1907330}
+}
+
+@article{Lovell1963,
+  author  = {Lovell, Michael C.},
+  title   = {Seasonal adjustment of economic time series and multiple
+             regression analysis},
+  journal = {Journal of the American Statistical Association},
+  volume  = {58},
+  number  = {304},
+  pages   = {993--1010},
+  year    = {1963},
+  doi     = {10.1080/01621459.1963.10480682}
+}
+
+@article{Isserlis1918,
+  author  = {Isserlis, L.},
+  title   = {On a formula for the product-moment coefficient of any
+             order of a normal frequency distribution in any number of
+             variables},
+  journal = {Biometrika},
+  volume  = {12},
+  number  = {1--2},
+  pages   = {134--139},
+  year    = {1918},
+  doi     = {10.1093/biomet/12.1-2.134}
+}
+
+@article{Li2022HEA,
+  author  = {Li, Xin and Shan, Guangcun and Zhang, Jiliang and
+             Shek, Chan-Hung},
+  title   = {Accelerated design for magnetic high entropy alloys using
+             data-driven multi-objective optimization},
+  journal = {Journal of Materials Chemistry C},
+  volume  = {10},
+  pages   = {17291--17302},
+  year    = {2022},
+  doi     = {10.1039/D2TC03922B}
+}
+
+@article{Yazdani2025,
+  author  = {Yazdani, Delaram and Yazdani, Danial and
+             Blanco-Davis, Eduardo and Nguyen, Trung Thanh},
+  title   = {A survey of multi-population optimization algorithms for
+             tracking the moving optimum in dynamic environments},
+  journal = {Journal of Membrane Computing},
+  volume  = {7},
+  number  = {2},
+  pages   = {85--107},
+  year    = {2025},
+  doi     = {10.1007/s41965-024-00163-y}
+}
+
+@article{MoralesEnciso2015,
+  author  = {Morales-Enciso, Sergio and Branke, J{\"u}rgen},
+  title   = {Tracking global optima in dynamic environments with
+             efficient global optimization},
+  journal = {European Journal of Operational Research},
+  volume  = {242},
+  number  = {3},
+  pages   = {744--755},
+  year    = {2015},
+  doi     = {10.1016/j.ejor.2014.11.028}
+}
+
+@book{ConnGouldToint2000,
+  author    = {Conn, Andrew R. and Gould, Nicholas I. M. and
+               Toint, Philippe L.},
+  title     = {Trust-Region Methods},
+  series    = {MPS-SIAM Series on Optimization},
+  publisher = {SIAM},
+  address   = {Philadelphia, PA},
+  year      = {2000},
+  doi       = {10.1137/1.9780898719857}
+}

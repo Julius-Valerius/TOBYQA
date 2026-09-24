@@ -1,0 +1,263 @@
+\section{Theoretical Properties of the Augmented System}
+\label{sec:properties}
+
+We now analyze the mathematical properties of the time-augmented formulation, including its algebraic solvability, drift decoupling, and statistical interpretation.
+
+\subsection{Solvability of the Augmented KKT System}
+\label{sec:well-posedness}
+
+We begin by establishing the algebraic conditions under which the augmented saddle-point KKT system~\eqref{eq:tobyqa-kkt} possesses a unique solution. 
+
+\begin{definition}
+\label{def:rank}
+The active interpolation set $\mathcal{Y}_k = \{(\vct{x}_i, t_i, F_i)\}_{i=1}^m$ is said to satisfy the augmented column-rank condition if the matrix $X_{\mathrm{aug}} = [\mathbf{1}_m \;\; D \;\; \vct{\theta}] \in \mathbb{R}^{m\times(n+2)}$ has full column rank, i.e.,
+\begin{equation}\label{eq:full-rank}
+  \operatorname{rank}(X_{\mathrm{aug}}) \;=\; n + 2.
+\end{equation}
+\end{definition}
+
+Condition~\eqref{eq:full-rank} requires that the all-ones vector $\mathbf{1}_m$, the spatial displacement columns $\vct{d}_{\cdot, 1}, \dots, \vct{d}_{\cdot, n}$, and the temporal offset vector $\vct{\theta}$ are linearly independent in $\mathbb{R}^m$. The following proposition gives the corresponding solvability result.
+
+\begin{proposition}
+\label{prop:solvability}
+Let $K := A + \tfrac{1}{\rho}I_m \in \mathbb{R}^{m\times m}$, where $A_{ij} = \tfrac{1}{2}(\vct{d}_i^\top \vct{d}_j)^2$ and $\rho > 0$. Then:
+\begin{enumerate}[\rm(i)]
+  \item $K$ is symmetric and strictly positive definite ($K \succ 0$).
+  \item If the active set $\mathcal{Y}_k$ satisfies Definition~\ref{def:rank}, the Schur complement matrix
+  \begin{equation}\label{eq:schur-S}
+    S \;:=\; X_{\mathrm{aug}}^\top K^{-1} X_{\mathrm{aug}} \;\in\; \mathbb{R}^{(n+2)\times(n+2)}
+  \end{equation}
+  is symmetric and strictly positive definite ($S \succ 0$).
+  \item The augmented KKT coefficient matrix $M$ in~\eqref{eq:tobyqa-kkt} is nonsingular, and the unique primal solution is given explicitly by
+  \begin{equation}\label{eq:primal-sol}
+    \begin{bmatrix}c\\\vct{g}\\\gamma\end{bmatrix}
+    \;=\;
+    S^{-1} X_{\mathrm{aug}}^\top K^{-1} \vct{F}
+    \;=:\;
+    \Pi \vct{F},
+  \end{equation}
+  where $\Pi := S^{-1} X_{\mathrm{aug}}^\top K^{-1} \in \mathbb{R}^{(n+2)\times m}$ is the linear recovery operator. The corresponding dual variable is $\vct{\lambda} = K^{-1}(\vct{F} - X_{\mathrm{aug}} \Pi \vct{F})$.
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}
+For part (i), let $\vct{v} \in \mathbb{R}^m$ be non-zero. Since $A_{ij} = \tfrac{1}{2}(\vct{d}_i^\top \vct{d}_j)^2$, which equals $\tfrac{1}{2}\operatorname{tr}\bigl((\vct{d}_i \vct{d}_i^\top)(\vct{d}_j \vct{d}_j^\top)\bigr)$, the matrix $A$ is the Gram matrix of the symmetric rank-one matrices $\{\tfrac{1}{\sqrt{2}} \vct{d}_i \vct{d}_i^\top\}_{i=1}^m$ under the Frobenius inner product, whence $A$ is symmetric positive semidefinite ($A \succeq 0$). For any $\rho > 0$, we have $\vct{v}^\top K \vct{v} = \vct{v}^\top A \vct{v} + \tfrac{1}{\rho}\|\vct{v}\|_2^2 \ge \tfrac{1}{\rho}\|\vct{v}\|_2^2 > 0$, proving $K \succ 0$.
+
+For part (ii), let $\vct{u} \in \mathbb{R}^{n+2}$ be non-zero. By Definition~\ref{def:rank}, $X_{\mathrm{aug}}$ has full column rank, so $\vct{w} := X_{\mathrm{aug}} \vct{u} \ne \vct{0} \in \mathbb{R}^m$. Because $K \succ 0$, its inverse $K^{-1} \succ 0$. Therefore, $\vct{u}^\top S \vct{u} = (X_{\mathrm{aug}} \vct{u})^\top K^{-1} (X_{\mathrm{aug}} \vct{u}) = \vct{w}^\top K^{-1} \vct{w} > 0$, which establishes $S \succ 0$.
+
+For part (iii), the block $2\times 2$ saddle-point system~\eqref{eq:tobyqa-kkt} has invertible upper-left block $K$ and invertible Schur complement $-S$. Standard block Gaussian elimination yields the unique solution: substituting $\vct{\lambda} = K^{-1}(\vct{F} - X_{\mathrm{aug}}[c, \vct{g}^\top, \gamma]^\top)$ into $X_{\mathrm{aug}}^\top \vct{\lambda} = \vct{0}$ gives $X_{\mathrm{aug}}^\top K^{-1} X_{\mathrm{aug}}[c, \vct{g}^\top, \gamma]^\top = X_{\mathrm{aug}}^\top K^{-1} \vct{F}$, which is $S [c, \vct{g}^\top, \gamma]^\top = X_{\mathrm{aug}}^\top K^{-1} \vct{F}$. Inverting $S$ yields~\eqref{eq:primal-sol}.
+\end{proof}
+
+\begin{remark}
+\label{rem:poisedness}
+In classical derivative-free optimization (such as NEWUOA~\cite{Powell2006NEWUOA} or deterministic trust-region methods~\cite{ConnScheinbergVicente2009}), interpolation poisedness is used to control both solvability and conditioning. In TOBYQA, the ridge term $\tfrac{1}{\rho}I_m$ guarantees $K\succ0$, while Proposition~\ref{prop:solvability} reduces the algebraic solvability requirement to full column rank of $X_{\mathrm{aug}}$. The rank condition is weaker than strict $\Lambda$-poisedness, although near-rank-deficient configurations may still be poorly conditioned.
+\end{remark}
+
+\begin{corollary}
+\label{cor:axis-rank}
+Let $\mathcal{Y}_0 = \{(\vct{x}_i, t_i, F_i)\}_{i=1}^{2n+1}$ be the initial active set constructed by the coordinate axis-probe with step size $\Delta_0 > 0$ across strictly increasing timestamps $t_1 < t_2 < \dots < t_{2n+1}$, with $\vct{x}_1 = \vct{x}_0$ evaluated at $t_1$. Then $\operatorname{rank}(X_{\mathrm{aug}}) = n + 2$.
+\end{corollary}
+
+\begin{proof}
+In the displacement matrix $D \in \mathbb{R}^{(2n+1)\times n}$, the rows corresponding to the probe pair $\vct{x}_0 \pm \Delta_0 \vct{e}_j$ are $\pm\Delta_0 \vct{e}_j^\top$, so the $n$ columns of $D$ are linearly independent and $\operatorname{rank}(D) = n$; moreover, the all-ones column is independent of the columns of $D$, because the row of $D$ at the center sample is zero while the corresponding entry of $\mathbf{1}_{2n+1}$ is one. Hence $\operatorname{rank}([\mathbf{1}_{2n+1} \;\; D]) = n+1$.
+
+Suppose, for contradiction, that $\vct{\theta} \in \operatorname{span}\{\mathbf{1}_{2n+1}, D\}$, i.e., $\theta_i = \alpha + \vct{\beta}^\top \vct{d}_i$ for some $\alpha \in \mathbb{R}$, $\vct{\beta} \in \mathbb{R}^n$ and all $i$. The center row gives $\alpha=\theta_1=0$. Applying the same relation to the two rows of the $j$-th probe pair, whose displacements are $\pm\Delta_0 \vct{e}_j$ and whose temporal offsets are $\theta_{2j}$ and $\theta_{2j+1}$, gives
+\[
+  \theta_{2j} = \alpha + \Delta_0 \beta_j,
+  \qquad
+  \theta_{2j+1} = \alpha - \Delta_0 \beta_j
+  \qquad\Longrightarrow\qquad
+  \alpha = \tfrac{1}{2}\bigl(\theta_{2j} + \theta_{2j+1}\bigr).
+\]
+Since the probe timestamps follow the center timestamp, $\tfrac12(\theta_{2j}+\theta_{2j+1})>0$, contradicting $\alpha=0$. Hence $\vct{\theta} \notin \operatorname{span}\{\mathbf{1}_{2n+1}, D\}$, and $\operatorname{rank}(X_{\mathrm{aug}}) = n+2$.
+\end{proof}
+
+\subsection{Affine-Drift Decoupling in Gradient Recovery}
+\label{sec:drift-decoupling}
+
+We next examine how an affine temporal component affects the recovered model parameters.
+
+The recovery operator $\Pi = S^{-1} X_{\mathrm{aug}}^\top K^{-1}$ defined in~\eqref{eq:primal-sol} satisfies
+\begin{equation}\label{eq:left-inverse}
+  \Pi X_{\mathrm{aug}} \;=\; \bigl(S^{-1} X_{\mathrm{aug}}^\top K^{-1}\bigr) X_{\mathrm{aug}} \;=\; S^{-1} \bigl(X_{\mathrm{aug}}^\top K^{-1} X_{\mathrm{aug}}\bigr) \;=\; S^{-1} S \;=\; I_{n+2}.
+\end{equation}
+Thus, $\Pi$ is a left inverse of the augmented regressor matrix $X_{\mathrm{aug}}$.
+
+\begin{theorem}
+\label{thm:exact-decoupling}
+Suppose the observation channel exhibits affine drift:
+\begin{equation}\label{eq:affine-channel}
+  F(\vct{x}, t) \;=\; f(\vct{x}) + \beta\,t + \varepsilon(\vct{x},t),
+\end{equation}
+for some unknown drift rate $\beta \in \mathbb{R}$. Let $\vct{F}^{\mathrm{stat}} := \vct{F} - \beta \vct{t} \in \mathbb{R}^m$ denote the underlying static observations that would be obtained in the absence of drift, and let $[c^{\mathrm{stat}}, (\vct{g}^{\mathrm{stat}})^\top, \gamma^{\mathrm{stat}}]^\top := \Pi \vct{F}^{\mathrm{stat}}$ be the model parameters recovered from $\vct{F}^{\mathrm{stat}}$. If $\operatorname{rank}(X_{\mathrm{aug}}) = n+2$, then the parameters recovered by TOBYQA from the drifting vector $\vct{F}$ satisfy:
+\begin{equation}\label{eq:decoupling-identity}
+  \vct{g} \;=\; \vct{g}^{\mathrm{stat}},
+  \qquad
+  \gamma \;=\; \gamma^{\mathrm{stat}} + \beta,
+  \qquad
+  c \;=\; c^{\mathrm{stat}} + \beta\,t_k.
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Let $\vct{t} = (t_1, \dots, t_m)^\top \in \mathbb{R}^m$ be the vector of query timestamps. Recalling that $t_i = t_k + \theta_i$, we decompose $\vct{t}$ over the columns of $X_{\mathrm{aug}} = [\mathbf{1}_m \;\; D \;\; \vct{\theta}]$:
+\begin{equation}\label{eq:t-decomp}
+  \vct{t} \;=\; t_k\,\mathbf{1}_m + \vct{\theta} \;=\; X_{\mathrm{aug}} \begin{bmatrix}t_k\\\mathbf{0}_n\\1\end{bmatrix}
+  \;=\; X_{\mathrm{aug}}\,(t_k \vct{e}_1 + \vct{e}_{n+2}),
+\end{equation}
+where $\vct{e}_1 = (1, 0, \dots, 0)^\top \in \mathbb{R}^{n+2}$ and $\vct{e}_{n+2} = (0, \dots, 0, 1)^\top \in \mathbb{R}^{n+2}$.
+The observation vector evaluated under~\eqref{eq:affine-channel} can be written as $\vct{F} = \vct{F}^{\mathrm{stat}} + \beta \vct{t}$. Applying the linear recovery operator $\Pi$ to $\vct{F}$ and invoking the left-inverse identity~\eqref{eq:left-inverse}, we obtain:
+\begin{align*}
+  \begin{bmatrix}c\\\vct{g}\\\gamma\end{bmatrix}
+  \;=\; \Pi \vct{F}
+  &\;=\; \Pi \vct{F}^{\mathrm{stat}} + \beta\,\Pi \vct{t} \\
+  &\;=\; \begin{bmatrix}c^{\mathrm{stat}}\\\vct{g}^{\mathrm{stat}}\\\gamma^{\mathrm{stat}}\end{bmatrix}
+  + \beta\,\Pi X_{\mathrm{aug}}\,(t_k \vct{e}_1 + \vct{e}_{n+2}) \\
+  &\;=\; \begin{bmatrix}c^{\mathrm{stat}}\\\vct{g}^{\mathrm{stat}}\\\gamma^{\mathrm{stat}}\end{bmatrix}
+  + \beta\,(t_k \vct{e}_1 + \vct{e}_{n+2}) \\
+  &\;=\; \begin{bmatrix}c^{\mathrm{stat}} + \beta t_k\\\vct{g}^{\mathrm{stat}}\\\gamma^{\mathrm{stat}} + \beta\end{bmatrix}.
+\end{align*}
+Equating respective components yields~\eqref{eq:decoupling-identity}.
+\end{proof}
+
+\begin{remark}
+\label{rem:significance}
+Theorem~\ref{thm:exact-decoupling} states that, for any drift rate $\beta$, any noise realization, and any sample geometry satisfying the augmented rank condition, adding the affine term $\beta \vct{t}$ does not change the recovered spatial gradient. The result does not depend on the particular Powell kernel used here; it requires only that $K$ be symmetric positive definite, so that $\Pi X_{\mathrm{aug}}=I_{n+2}$. In regression terms, this is an instance of the Frisch--Waugh--Lovell principle~\cite{FrischWaugh1933,Lovell1963}: the temporal column is treated as a nuisance regressor, and the spatial coefficients are recovered after accounting for that column.
+\end{remark}
+
+We next generalize the analysis to nonlinear observation drift $\mu(t)$ with bounded second derivative.
+
+\begin{theorem}
+\label{thm:nonlinear-drift}
+Suppose the observation channel has the form $F(\vct{x},t) = f(\vct{x}) + \mu(t) + \varepsilon(\vct{x},t)$, where $\mu \in C^2(\mathbb{R})$ with $|\mu''(t)| \le L_\mu$ for all $t$. Let $\tau_{\max} := \max_{i} |t_i - t_k|$ denote the maximum temporal span of the active set $\mathcal{Y}_k$. Then:
+\begin{equation}\label{eq:nonlinear-bounds}
+  \bigl|\gamma - \gamma^{\mathrm{stat}} - \mu'(t_k)\bigr| \;\le\; C_\gamma\,L_\mu\,\tau_{\max},
+  \qquad
+  \bigl\|\vct{g} - \vct{g}^{\mathrm{stat}}\bigr\|_2 \;\le\; C_g\,L_\mu\,\tau_{\max}^2,
+\end{equation}
+where, for a fixed normalized sample geometry, the constants $C_\gamma, C_g > 0$ are independent of $\tau_{\max}$ and $L_\mu$; they depend on the normalized spatial and temporal configuration and on $\rho$.
+\end{theorem}
+
+\begin{proof}
+Performing a second-order Taylor expansion of $\mu(t_i)$ around the center timestamp $t_k$ gives
+\[
+  \mu(t_i) \;=\; \mu(t_k) + \mu'(t_k)\theta_i + r_\mu(t_i),
+  \qquad
+  |r_\mu(t_i)| \;\le\; \tfrac{1}{2} L_\mu \theta_i^2 \;\le\; \tfrac{1}{2} L_\mu \tau_{\max}^2.
+\]
+In vector notation,
+\begin{align*}
+  \vct{\mu} \;=\; \mu(t_k)\mathbf{1}_m + \mu'(t_k)\vct{\theta} + \vct{r}_\mu
+  \;=\; X_{\mathrm{aug}}\bigl[\mu(t_k)\, \vct{e}_1 + \mu'(t_k)\, \vct{e}_{n+2}\bigr] + \vct{r}_\mu.
+\end{align*}
+Applying the recovery operator $\Pi$, the constant and linear terms in time are represented by the corresponding columns of $X_{\mathrm{aug}}$, leaving the perturbation induced by the second-order residual $\vct{r}_\mu$:
+\[
+  \begin{bmatrix}c - c^{\mathrm{stat}} - \mu(t_k)\\\vct{g} - \vct{g}^{\mathrm{stat}}\\\gamma - \gamma^{\mathrm{stat}} - \mu'(t_k)\end{bmatrix}
+  \;=\; \Pi\,\vct{r}_\mu.
+\]
+It remains to bound the components of $\Pi\,\vct{r}_\mu$. Write $\tau := \tau_{\max}$ and factor the temporal column as $\vct{\theta} = \tau\,\vct{\hat\theta}$ with $\|\vct{\hat\theta}\|_\infty \le 1$. With
+\[
+  T := \begin{bmatrix}\mathbf{1}_m & D & \vct{\hat\theta}\end{bmatrix},
+  \qquad
+  J := \operatorname{diag}(I_{n+1},\, \tau),
+  \qquad\text{so that}\qquad
+  X_{\mathrm{aug}} = TJ,
+\]
+we have $S = X_{\mathrm{aug}}^\top K^{-1} X_{\mathrm{aug}} = J\,\hat S\,J$ with $\hat S := T^\top K^{-1} T$. The matrix $K = A + \rho^{-1}I_m$ depends only on the spatial displacements and $\rho$, so both $K$ and $\hat S$ are independent of $\tau$ under this scaling, and
+\[
+  \Pi\, \vct{r}_\mu
+  \;=\; S^{-1} X_{\mathrm{aug}}^\top K^{-1} \vct{r}_\mu
+  \;=\; J^{-1} \hat S^{-1} T^\top K^{-1} \vct{r}_\mu,
+\]
+where $J^{-1} = \operatorname{diag}(I_{n+1}, \tau^{-1})$. Since the matrix $\hat S^{-1} T^\top K^{-1}$ is independent of $\tau$, the scaling of the components of $\Pi \vct{r}_\mu = J^{-1} (\hat S^{-1} T^\top K^{-1} \vct{r}_\mu)$ is governed by $J^{-1}$: the $(c,\vct{g})$-components carry factor $1$, while the $\gamma$-component carries factor $\tau^{-1}$. Combining this with $\|\vct{r}_\mu\|_2 \le \sqrt{m}\,\|\vct{r}_\mu\|_\infty \le \tfrac{\sqrt{m}}{2} L_\mu \tau^2$ yields
+\begin{align*}
+  \bigl|\gamma - \gamma^{\mathrm{stat}} - \mu'(t_k)\bigr|
+  &\;\le\; \frac{\|\hat S^{-1} T^\top K^{-1}\|_2 \sqrt{m}}{2}\, L_\mu\, \tau, \\
+  \bigl\|\vct{g} - \vct{g}^{\mathrm{stat}}\bigr\|_2
+  &\;\le\; \frac{\|\hat S^{-1} T^\top K^{-1}\|_2 \sqrt{m}}{2}\, L_\mu\, \tau^2,
+\end{align*}
+which is~\eqref{eq:nonlinear-bounds} with $C_\gamma = C_g = \tfrac{\sqrt{m}}{2}\,\|\hat S^{-1} T^\top K^{-1}\|_2$, a quantity independent of $\tau$ and $L_\mu$.
+\end{proof}
+
+\begin{remark}
+\label{rem:fifo-bound}
+Theorem~\ref{thm:nonlinear-drift} shows that the temporal span of the active set directly controls the nonlinear-drift contribution to the recovered gradient. The time-priority replacement rule in Section~\ref{sec:arc-decision} discards the oldest non-center sample and therefore keeps the retained observations temporally compact, subject to the protected center point.
+\end{remark}
+
+\subsection{Statistical Interpretation of the Powell Residual Kernel}
+\label{sec:statistical-foundation}
+
+We next derive a statistical interpretation of the kernel matrix $K = A + \tfrac{1}{\rho}I_m$.
+
+Recall from Section~\ref{sec:arc-decision} that the step computation uses the model with $H_k = 0$, so the surrogate minimized in the trial step subproblem is linear in space: $Q_k(\vct{d}, \theta) = c + \vct{g}^\top \vct{d} + \gamma\theta$. A second-order Taylor expansion of $f$ about $\vct{x}_k$ then gives, for each sample,
+\begin{equation}\label{eq:residual-decomp}
+  F_i - Q_k(\vct{d}_i, \theta_i) \;=\; \tfrac{1}{2} \vct{d}_i^\top H \vct{d}_i + O(\|\vct{d}_i\|_2^3) + \varepsilon_i,
+\end{equation}
+where $H = \nabla^2 f(\vct{x}_k)$ is the local Hessian omitted from the decision model and $\varepsilon_i \sim \mathcal{N}(0, \sigma_\varepsilon^2)$ is white observation noise. After the zeroth- and first-order terms and the temporal component have been represented by $(c, \vct{g}, \gamma)$, spatial curvature enters the residual quadratically in the displacement. The following proposition gives the covariance of these quadratic terms under a rotation-invariant prior and relates it to Powell's kernel $A$.
+
+\begin{proposition}
+\label{prop:kernel-stat}
+Let $H \in \mathbb{R}^{n\times n}$ be a random symmetric matrix drawn from a rotation-invariant ensemble with $\mathbb{E}[H] = 0$ and
+\begin{equation}\label{eq:goe-prior}
+  \mathbb{E}[H_{ab} H_{cd}] \;=\; \sigma_H^2\,(\delta_{ac}\delta_{bd} + \delta_{ad}\delta_{bc}),
+\end{equation}
+where $\sigma_H^2 > 0$ reflects the curvature uncertainty scale. Then for any displacement vectors $\vct{d}_i, \vct{d}_j \in \mathbb{R}^n$, the covariance between the unmodeled quadratic forms $q_i := \tfrac{1}{2} \vct{d}_i^\top H \vct{d}_i$ and $q_j := \tfrac{1}{2} \vct{d}_j^\top H \vct{d}_j$ is given by
+\begin{equation}\label{eq:cov-kernel}
+  \operatorname{Cov}(q_i, q_j) \;=\; \tfrac{\sigma_H^2}{2}\,(\vct{d}_i^\top \vct{d}_j)^2 \;=\; \sigma_H^2 A_{ij}.
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+Writing $q_i = \tfrac{1}{2}\sum_{a,b=1}^n H_{ab} d_{i,a} d_{i,b}$, we have $\mathbb{E}[q_i] = 0$. The covariance is:
+\begin{align*}
+  \operatorname{Cov}(q_i, q_j)
+  &\;=\; \mathbb{E}[q_i q_j]
+  \;=\; \tfrac{1}{4} \sum_{a,b=1}^n \sum_{c,d=1}^n \mathbb{E}[H_{ab} H_{cd}]\,d_{i,a} d_{i,b} d_{j,c} d_{j,d} \\
+  &\;=\; \tfrac{\sigma_H^2}{4} \sum_{a,b,c,d=1}^n (\delta_{ac}\delta_{bd} + \delta_{ad}\delta_{bc})\,d_{i,a} d_{i,b} d_{j,c} d_{j,d} \\
+  &\;=\; \tfrac{\sigma_H^2}{4} \Biggl(\sum_{a,b=1}^n d_{i,a} d_{j,a} d_{i,b} d_{j,b} + \sum_{a,b=1}^n d_{i,a} d_{j,b} d_{i,b} d_{j,a}\Biggr) \\
+  &\;=\; \tfrac{\sigma_H^2}{4} \Bigl((\vct{d}_i^\top \vct{d}_j)^2 + (\vct{d}_i^\top \vct{d}_j)^2\Bigr)
+  \;=\; \tfrac{\sigma_H^2}{2} (\vct{d}_i^\top \vct{d}_j)^2
+  \;=\; \sigma_H^2 A_{ij},
+\end{align*}
+where the last step uses $A_{ij} = \tfrac{1}{2}(\vct{d}_i^\top \vct{d}_j)^2$. Hence the covariance of the omitted quadratic terms is $\sigma_H^2 A$.
+\end{proof}
+
+Under Proposition~\ref{prop:kernel-stat}, treating the unmodeled curvature as a Gaussian random effect with covariance $\sigma_H^2 A$ and observation noise as independent Gaussian with covariance $\sigma_\varepsilon^2 I_m$, the total covariance of the residual vector is
+\[
+  \Sigma_{\mathrm{res}} \;=\; \sigma_H^2 A + \sigma_\varepsilon^2 I_m \;=\; \sigma_H^2 \Bigl(A + \frac{\sigma_\varepsilon^2}{\sigma_H^2} I_m\Bigr) \;=\; \sigma_H^2 \bigl(A + \rho^{-1} I_m\bigr) \;=\; \sigma_H^2 K,
+\]
+where $\rho = \sigma_H^2 / \sigma_\varepsilon^2$ is the signal-to-noise ratio between curvature variation and observation noise. The generalized least squares (GLS) estimator of $[c, \vct{g}^\top, \gamma]^\top$ under residual covariance $\Sigma_{\mathrm{res}}$ is $(X_{\mathrm{aug}}^\top \Sigma_{\mathrm{res}}^{-1} X_{\mathrm{aug}})^{-1} X_{\mathrm{aug}}^\top \Sigma_{\mathrm{res}}^{-1} \vct{F} = (X_{\mathrm{aug}}^\top K^{-1} X_{\mathrm{aug}})^{-1} X_{\mathrm{aug}}^\top K^{-1} \vct{F} = \Pi \vct{F}$.
+
+Thus, under this residual model, the soft-constrained KKT estimate~\eqref{eq:tobyqa-kkt} coincides with the generalized least-squares estimator.
+
+\subsection{Drift-Compensated Reduction and Error Decomposition}
+\label{sec:ared-decomposition}
+
+Finally, we analyze the drift-compensated actual reduction $\mathrm{Ared}_k$ defined in~\eqref{eq:ared-def}.
+
+\begin{proposition}
+\label{prop:ared-decomp}
+Suppose queries are performed through the channel $F(\vct{x},t) = \phi(f(\vct{x}),t) + \varepsilon(\vct{x},t)$. For a trial step $\vct{s}_k$ evaluated at $t_{\mathrm{new}}$ with center $\vct{x}_k$ at $t_k$, the actual reduction has the decomposition
+\begin{equation}\label{eq:ared-three-terms}
+  \mathrm{Ared}_k \;=\; \Delta f(\vct{x}_k, \vct{s}_k) \;+\; \mathcal{E}_{\mathrm{drift}} \;+\; \mathcal{E}_{\mathrm{noise}},
+\end{equation}
+where:
+\begin{enumerate}[\rm(i)]
+  \item $\Delta f(\vct{x}_k, \vct{s}_k) := f(\vct{x}_k) - f(\vct{x}_k + \vct{s}_k)$ is the latent-objective reduction.
+  \item $\mathcal{E}_{\mathrm{drift}} := \gamma_k (t_{\mathrm{new}} - t_k) - \bigl(\phi(f(\vct{x}_k+\vct{s}_k), t_{\mathrm{new}}) - \phi(f(\vct{x}_k), t_k)\bigr) - \Delta f(\vct{x}_k, \vct{s}_k)$ is the temporal compensation error.
+  \item $\mathcal{E}_{\mathrm{noise}} := \varepsilon(\vct{x}_k, t_k) - \varepsilon(\vct{x}_k + \vct{s}_k, t_{\mathrm{new}})$ is the zero-mean observation noise error with variance $2\sigma_\varepsilon^2$.
+\end{enumerate}
+In particular, under affine drift $\phi(f(\vct{x}), t) = f(\vct{x}) + \beta t$, Theorem~\ref{thm:exact-decoupling} gives
+\begin{equation}\label{eq:ared-affine-residual}
+  \mathcal{E}_{\mathrm{drift}}
+  \;=\; (\gamma_k-\beta)\,(t_{\mathrm{new}}-t_k)
+  \;=\; \gamma_k^{\mathrm{stat}}\,(t_{\mathrm{new}}-t_k).
+\end{equation}
+Thus the contribution of the affine drift rate $\beta$ cancels from $\mathcal{E}_{\mathrm{drift}}$. A residual offset may remain because the drift-free spatial data can induce a nonzero coefficient $\gamma_k^{\mathrm{stat}}$ through space--time correlation in the sequential sample geometry.
+\end{proposition}
+
+\begin{proof}
+Substituting the channel expressions for $F_k$ and $F_{\mathrm{new}}$ into~\eqref{eq:ared-def} and grouping the spatial, temporal, and noise terms yields~\eqref{eq:ared-three-terms}. Under affine drift, the temporal difference contributes $\beta(t_{\mathrm{new}}-t_k)$, while Theorem~\ref{thm:exact-decoupling} gives $\gamma_k=\gamma_k^{\mathrm{stat}}+\beta$. Substitution yields~\eqref{eq:ared-affine-residual}.
+\end{proof}
+
+

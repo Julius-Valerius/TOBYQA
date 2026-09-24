@@ -1,0 +1,16 @@
+\begin{table}[t]
+\centering\footnotesize
+\setlength{\tabcolsep}{3pt}
+\caption{Solve rates (\%) of the Zero-Hessian default versus the interpolated Hessian, by dimension and tolerance. The first three column groups use the main budget of $1500$ evaluations; the last two use budget-scaled cells ($n=6$ with $450$ evaluations, $n=20$ with $5000$). Pooled over all $65$ problems, $7$ drift channels, and $5$ seeds.}
+\label{tab:hessian}
+\begin{tabular}{l cc cc cc cc cc}
+\toprule
+& \multicolumn{2}{c}{$n=6$} & \multicolumn{2}{c}{$n=10$} & \multicolumn{2}{c}{$n=20$} & \multicolumn{2}{c}{$n=6$, b=450} & \multicolumn{2}{c}{$n=20$, b=5000} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(lr){8-9}\cmidrule(lr){10-11}
+Solver & $10^{-3}$ & $10^{-5}$ & $10^{-3}$ & $10^{-5}$ & $10^{-3}$ & $10^{-5}$ & $10^{-3}$ & $10^{-5}$ & $10^{-3}$ & $10^{-5}$ \\
+\midrule
+TOBYQA ($H_k \equiv 0$) & 70.2 & 34.4 & 59.9 & 32.0 & 41.7 & 26.2 & 83.3 & 64.3 & 67.1 & 45.9 \\
+\quad + interpolated $H$ & 62.4 & 24.0 & 60.1 & 29.9 & 50.7 & 38.9 & 67.3 & 44.9 & 70.8 & 59.7 \\
+\bottomrule
+\end{tabular}
+\end{table}
