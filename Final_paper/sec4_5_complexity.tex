@@ -1,12 +1,11 @@
-\section{Convergence and Complexity Analysis}
+\section{Complexity Analysis}
 \label{sec:complexity}
-
-In this section, we establish the convergence properties and oracle complexity of TOBYQA under fully-linear models.
-
-\subsection{Standing Assumptions and Stochastic Framework}
 \label{sec:assumptions}
+\label{sec:reliable-regime}
+\label{sec:supermartingale}
+\label{sec:expected-complexity}
 
-We analyze TOBYQA under the classical framework of fully-linear models~\cite{ConnScheinbergVicente2009,ChenMenickellyScheinberg2018,CartisRoberts2019}. Let $\mathcal{F}_{k-1} := \sigma(\vct{x}_0, \dots, \vct{x}_k, \mathcal{Y}_0, \dots, \mathcal{Y}_k)$ denote the filtration representing the history of the algorithm up to the beginning of iteration $k$. We impose the following standard assumptions on the latent objective function and the observation channel.
+We now establish the evaluation complexity of Algorithm~\ref{alg:tobyqa} within the framework of fully-linear interpolation models~\cite{ConnScheinbergVicente2009,ChenMenickellyScheinberg2018,CartisRoberts2019}. We impose the following assumptions on the latent objective function and the interpolation model.
 
 \begin{assumption}
 \label{ass:smoothness}
@@ -19,19 +18,16 @@ and is bounded from below by $f_{\mathrm{low}} > -\infty$ on $\mathbb{R}^n$.
 
 \begin{assumption}
 \label{ass:radius-bounds}
-\textup{\textbf{(Active-set radius bounds.)}}
 There exist constants $0<\delta_{\mathrm{lo}}\le\delta_{\mathrm{hi}}<\infty$ such that, at every iteration prior to termination,
 \begin{equation}\label{eq:radius-bounds}
   \delta_{\mathrm{lo}}\;\le\;\delta_k\;\le\;\delta_{\mathrm{hi}},
   \qquad
   \delta_k:=\max_{i=1,\dots,m}\|\vct{x}_i-\vct{x}_k\|_2.
 \end{equation}
-Such active-set radius bounds are standard in derivative-free complexity analysis~\cite{ConnScheinbergVicente2009,CartisRoberts2019}.
 \end{assumption}
 
 \begin{assumption}
 \label{ass:fully-linear}
-\textup{\textbf{(Fully-linear gradient accuracy.)}}
 There exists a constant $\kappa_{eg} > 0$ such that, at every iteration $k \ge 0$, the recovered model gradient $\vct{g}_k$ satisfies
 \begin{equation}\label{eq:grad-error-bound}
   \|\vct{g}_k - \nabla f(\vct{x}_k)\|_2 \;\le\; \kappa_{eg}\,\zeta_k,
@@ -39,99 +35,77 @@ There exists a constant $\kappa_{eg} > 0$ such that, at every iteration $k \ge 0
 where $\zeta_k := \max\{\delta_k, \sigma_\varepsilon / \delta_k\}$ and $\delta_k$ is the active sample radius in~\eqref{eq:radius-bounds}.
 \end{assumption}
 
-Assumption~\ref{ass:fully-linear} is the standard accuracy condition for fully-linear models in derivative-free optimization~\cite{ConnScheinbergVicente2009}. Its error scale combines the sample radius $\delta_k$, which controls spatial truncation, and the ratio $\sigma_\varepsilon / \delta_k$, which accounts for noise amplification.
+Assumptions~\ref{ass:smoothness}--\ref{ass:fully-linear} are standard in derivative-free complexity analysis~\cite{ConnScheinbergVicente2009,CartisRoberts2019}. Here $\zeta_k$ combines the spatial interpolation error $O(\delta_k)$ and the noise amplification $O(\sigma_\varepsilon / \delta_k)$; under affine drift the temporal trend is removed exactly by Theorem~\ref{thm:exact-decoupling}, whereas under nonlinear drift with bounded temporal span $\tau_{\max} = O(n)$ the residual drift error from Theorem~\ref{thm:nonlinear-drift} is absorbed into~\eqref{eq:grad-error-bound}.
 
-For the observation channel, Proposition~\ref{prop:ared-decomp} and Theorem~\ref{thm:exact-decoupling} show that the affine drift rate is represented by the temporal coefficient and does not enter the recovered spatial gradient. They do not imply that the drift-free time coefficient $\gamma_k^{\mathrm{stat}}$ vanishes. Sequential space--time correlation can produce a nonzero $\gamma_k^{\mathrm{stat}}$ even without observation noise. We therefore define the conditional acceptance bias
+To analyze step acceptance at iteration $k$, let $\mathbb{E}_k[\cdot]$ and $\mathbb{P}_k(\cdot)$ denote expectation and probability over the observation noise term $\mathcal{E}_{\mathrm{noise}} = \varepsilon(\vct{x}_k, t_k) - \varepsilon(\vct{x}_k + \vct{s}_k, t_{\mathrm{new}})$ conditional on the iterate $\vct{x}_k$ and trial step $\vct{s}_k$. By Proposition~\ref{prop:ared-decomp} and $\mathbb{E}_k[\mathcal{E}_{\mathrm{noise}}] = 0$, the expected drift-compensated reduction differs from the true objective decrease by the acceptance bias
 \begin{equation}\label{eq:ared-expectation}
-  b_k \;:=\; \mathbb{E}[\mathrm{Ared}_k \mid \mathcal{F}_{k-1}]
-  - \bigl(f(\vct{x}_k)-f(\vct{x}_k+\vct{s}_k)\bigr).
+  b_k \;:=\; \mathbb{E}_k[\mathrm{Ared}_k]
+  - \bigl(f(\vct{x}_k)-f(\vct{x}_k+\vct{s}_k)\bigr)
+  \;=\; \mathbb{E}_k[\mathcal{E}_{\mathrm{drift}}].
 \end{equation}
-Under affine drift, relation~\eqref{eq:ared-affine-residual} identifies the deterministic space--time aliasing contribution as $\gamma_k^{\mathrm{stat}}\Delta t_k$; under $C^2$ drift, $b_k$ also contains the nonlinear temporal truncation error. The following assumption controls this conditional bias and the remaining stochastic innovation.
+The following assumption bounds this bias and the noise tail in $\mathrm{Ared}_k$.
 
 \begin{assumption}
 \label{ass:drift-regime}
-\textup{\textbf{(Acceptance-channel residual.)}}
-There exists $\varepsilon > 0$ such that, whenever the incumbent satisfies $\|\nabla f(\vct{x}_k)\|_2 \ge \varepsilon$, the conditional bias in~\eqref{eq:ared-expectation} obeys
+There exists $\varepsilon > 0$ such that, whenever the current center satisfies $\|\nabla f(\vct{x}_k)\|_2 \ge \varepsilon$, the acceptance bias in~\eqref{eq:ared-expectation} obeys
 \begin{equation}\label{eq:residual-drift-bound}
   |b_k| \;\le\; \tfrac{1}{4}\,\mathrm{Pred}_k,
 \end{equation}
-and the centered innovation $\mathrm{Ared}_k-\mathbb{E}[\mathrm{Ared}_k\mid\mathcal F_{k-1}]$ is conditionally sub-Gaussian with variance proxy $2\sigma_\varepsilon^2$.
+and the noise perturbation $\mathcal{E}_{\mathrm{noise}} = \mathrm{Ared}_k - \mathbb{E}_k[\mathrm{Ared}_k]$ is conditionally sub-Gaussian with variance proxy $2\sigma_\varepsilon^2$.
 \end{assumption}
 
-\subsection{Reliable Regularization Regime and Step Decrease}
-\label{sec:reliable-regime}
+Condition~\eqref{eq:residual-drift-bound} requires the temporal compensation error not to dominate the predicted decrease during non-stationary iterations. Under affine drift, relation~\eqref{eq:ared-affine-residual} gives $b_k = \mathbb{E}_k[\gamma_k^{\mathrm{stat}}] (t_{\mathrm{new}} - t_k)$, which reflects any deterministic space--time correlation along the trajectory. Under nonlinear $C^2$ drift, $b_k$ also includes the temporal truncation error bounded by $O(L_\mu \tau_{\max}^2)$ in Theorem~\ref{thm:nonlinear-drift}; because the FIFO replacement rule keeps $\tau_{\max} = O(n)$, condition~\eqref{eq:residual-drift-bound} holds whenever the drift curvature $L_\mu$ and step interval $t_{\mathrm{new}} - t_k$ are moderate relative to $\varepsilon$.
 
-Recall from Section~\ref{sec:arc-decision} that the Zero-Hessian closed-form cubic trial step $\vct{s}_k$ and the corresponding predicted reduction $\mathrm{Pred}_k$ satisfy:
-\begin{equation}\label{eq:step-pred-relations}
-  \vct{s}_k \;=\; -\frac{\vct{g}_k}{\sqrt{\sigma_k \|\vct{g}_k\|_2}},
-  \qquad
-  \mathrm{Pred}_k \;=\; \|\vct{g}_k\|_2^{3/2}\,\sigma_k^{-1/2} \;=\; \|\vct{g}_k\|_2\,\|\vct{s}_k\|_2,
-\end{equation}
-with $\|\vct{s}_k\|_2 = \sqrt{\|\vct{g}_k\|_2 / \sigma_k}$.
-We first give a sufficient lower bound on the cubic regularization weight $\sigma_k$ for decrease in the latent objective $f$.
+We first give a sufficient lower bound on the cubic regularization weight $\sigma_k$ for the trial step~\eqref{eq:closed-form-step} to reduce the latent objective $f$.
 
 \begin{lemma}
 \label{lem:reliable-sigma}
-\textup{\textbf{(Descent under sufficient regularization.)}}
 Let Assumption~\ref{ass:smoothness} hold. If the cubic regularization weight satisfies
 \begin{equation}\label{eq:sigma-threshold}
   \sigma_k \;\ge\; \sigma^*(\vct{g}_k) \;:=\; \frac{4L_g^2}{\|\vct{g}_k\|_2},
 \end{equation}
-then the objective decrease along the candidate trial step $\vct{s}_k$ satisfies
+then the objective decrease along the trial step $\vct{s}_k$ satisfies
 \begin{equation}\label{eq:true-decrease-bound}
   f(\vct{x}_k) - f(\vct{x}_k + \vct{s}_k) \;\ge\; \tfrac{3}{4}\,\mathrm{Pred}_k \;-\; \|\vct{g}_k - \nabla f(\vct{x}_k)\|_2\,\|\vct{s}_k\|_2.
 \end{equation}
 \end{lemma}
 
 \begin{proof}
-By the classical descent lemma for $L_g$-smooth functions (Assumption~\ref{ass:smoothness}), we have
+By the descent lemma for $L_g$-smooth functions (Assumption~\ref{ass:smoothness}), we have
 \begin{align*}
   f(\vct{x}_k + \vct{s}_k) 
   &\;\le\; f(\vct{x}_k) + \nabla f(\vct{x}_k)^\top \vct{s}_k + \tfrac{L_g}{2}\|\vct{s}_k\|_2^2 \\
   &\;=\; f(\vct{x}_k) + \vct{g}_k^\top \vct{s}_k + \tfrac{L_g}{2}\|\vct{s}_k\|_2^2 + \bigl(\nabla f(\vct{x}_k) - \vct{g}_k\bigr)^\top \vct{s}_k.
 \end{align*}
-Using $\vct{g}_k^\top \vct{s}_k = -\|\vct{g}_k\|_2 \|\vct{s}_k\|_2 = -\mathrm{Pred}_k$ and Cauchy--Schwarz, rearranging terms yields
+Using $\vct{g}_k^\top \vct{s}_k = -\mathrm{Pred}_k$ from~\eqref{eq:pred-def} and the Cauchy--Schwarz inequality yields
 \begin{equation}\label{eq:descent-intermediate}
   f(\vct{x}_k) - f(\vct{x}_k + \vct{s}_k) \;\ge\; \mathrm{Pred}_k \;-\; \tfrac{L_g}{2}\|\vct{s}_k\|_2^2 \;-\; \|\vct{g}_k - \nabla f(\vct{x}_k)\|_2\,\|\vct{s}_k\|_2.
 \end{equation}
-We now evaluate the ratio of the quadratic curvature penalty $\tfrac{L_g}{2}\|\vct{s}_k\|_2^2$ to the predicted decrease $\mathrm{Pred}_k$. Substituting the closed-form identities~\eqref{eq:step-pred-relations} gives:
+By~\eqref{eq:closed-form-step}--\eqref{eq:pred-def} and condition~\eqref{eq:sigma-threshold}, the ratio of the quadratic curvature term to $\mathrm{Pred}_k$ satisfies
 \begin{equation}\label{eq:curvature-ratio}
   \frac{\tfrac{L_g}{2}\|\vct{s}_k\|_2^2}{\mathrm{Pred}_k}
   \;=\;
   \frac{\tfrac{L_g}{2}\bigl(\|\vct{g}_k\|_2 / \sigma_k\bigr)}{\|\vct{g}_k\|_2^{3/2} \sigma_k^{-1/2}}
   \;=\;
-  \frac{L_g}{2\sqrt{\sigma_k \|\vct{g}_k\|_2}}.
+  \frac{L_g}{2\sqrt{\sigma_k \|\vct{g}_k\|_2}}
+  \;\le\; \tfrac{1}{4},
 \end{equation}
-Under condition~\eqref{eq:sigma-threshold}, we have $\sigma_k \|\vct{g}_k\|_2 \ge 4L_g^2$, which implies $\sqrt{\sigma_k \|\vct{g}_k\|_2} \ge 2L_g$. Substituting this inequality into~\eqref{eq:curvature-ratio} yields
-\[
-  \frac{\tfrac{L_g}{2}\|\vct{s}_k\|_2^2}{\mathrm{Pred}_k} \;\le\; \frac{L_g}{2(2L_g)} \;=\; \tfrac{1}{4},
-  \qquad\text{whence}\qquad
-  \tfrac{L_g}{2}\|\vct{s}_k\|_2^2 \;\le\; \tfrac{1}{4}\,\mathrm{Pred}_k.
-\]
-Substituting $\tfrac{L_g}{2}\|\vct{s}_k\|_2^2 \le \tfrac{1}{4}\mathrm{Pred}_k$ into~\eqref{eq:descent-intermediate} yields~\eqref{eq:true-decrease-bound}, completing the proof.
+so $\tfrac{L_g}{2}\|\vct{s}_k\|_2^2 \le \tfrac{1}{4}\,\mathrm{Pred}_k$. Substituting this bound into~\eqref{eq:descent-intermediate} gives~\eqref{eq:true-decrease-bound}.
 \end{proof}
 
-\begin{remark}
-\label{rem:feedback-control}
-\textup{\textbf{(Interpretation of the regularization scale.)}}
-Condition~\eqref{eq:sigma-threshold} identifies the scale at which the curvature term in the descent bound is at most one quarter of the predicted reduction. In Algorithm~\ref{alg:tobyqa}, changing $\sigma_k$ changes the step length through $\|\vct{s}_k\|_2=\sqrt{\|\vct{g}_k\|_2/\sigma_k}$: rejection increases $\sigma_k$, whereas an accepted step with $r_k>\eta$ decreases it. Thus $\sigma_k$ controls the step length without a separately maintained trust-region radius.
-\end{remark}
-
-\subsection{Rejection Probability and Regularization Confinement}
-\label{sec:supermartingale}
+Lemma~\ref{lem:reliable-sigma} shows that when $\sigma_k \ge \sigma^*(\vct{g}_k)$ and the gradient error term $\|\vct{g}_k - \nabla f(\vct{x}_k)\|_2 \|\vct{s}_k\|_2$ is at most $\tfrac{1}{4}\mathrm{Pred}_k$, the trial step produces a latent objective decrease of at least $\tfrac{1}{2}\mathrm{Pred}_k$. Combining this deterministic decrease with Assumption~\ref{ass:drift-regime} bounds the conditional probability that the step is rejected.
 
 \begin{lemma}
 \label{lem:reject-prob}
-\textup{\textbf{(Rejection probability in the reliable regime.)}}
 Let Assumption~\ref{ass:smoothness} hold, let the residual drift bound~\eqref{eq:residual-drift-bound} hold at iteration $k$, and suppose that
 \begin{equation}\label{eq:reliable-conditions}
-  \sigma_k \;\ge\; \gamma_2\,\sigma^*(\vct{g}_k)
+  \sigma_k \;\ge\; \sigma^*(\vct{g}_k)
   \qquad\text{and}\qquad
   \|\vct{g}_k - \nabla f(\vct{x}_k)\|_2\,\|\vct{s}_k\|_2 \;\le\; \tfrac{1}{4}\,\mathrm{Pred}_k.
 \end{equation}
 Then the conditional rejection probability obeys
 \begin{equation}\label{eq:reject-prob}
-  \mathbb{P}\bigl(\text{iteration } k \text{ is rejected} \,\big|\, \mathcal{F}_{k-1}\bigr)
+  \mathbb{P}_k\bigl(\text{iteration } k \text{ is rejected}\bigr)
   \;\le\;
   e^{-\kappa_{\mathrm{tol}}^2/8}
   \;=:\; p',
@@ -140,30 +114,29 @@ and $p' \le \tfrac{1}{2}$ whenever $\kappa_{\mathrm{tol}} \ge \sqrt{8\ln 2}$.
 \end{lemma}
 
 \begin{proof}
-Under $\sigma_k \ge \gamma_2\sigma^*(\vct{g}_k)$ we have $\sigma_k\|\vct{g}_k\|_2 \ge 4L_g^2$, so Lemma~\ref{lem:reliable-sigma} gives $\Delta f_k \ge \tfrac{3}{4}\mathrm{Pred}_k - \|\vct{g}_k - \nabla f(\vct{x}_k)\|_2\|\vct{s}_k\|_2 \ge \tfrac{1}{2}\mathrm{Pred}_k$. Together with~\eqref{eq:residual-drift-bound} and the expectation~\eqref{eq:ared-expectation}, this yields
+By Lemma~\ref{lem:reliable-sigma} and~\eqref{eq:reliable-conditions}, $\Delta f(\vct{x}_k, \vct{s}_k) \ge \tfrac{3}{4}\mathrm{Pred}_k - \|\vct{g}_k - \nabla f(\vct{x}_k)\|_2\|\vct{s}_k\|_2 \ge \tfrac{1}{2}\mathrm{Pred}_k$. Together with~\eqref{eq:ared-expectation} and~\eqref{eq:residual-drift-bound}, this yields
 \[
-  \mathbb{E}[\mathrm{Ared}_k \mid \mathcal{F}_{k-1}]
-  \;=\; \Delta f_k + b_k
+  \mathbb{E}_k[\mathrm{Ared}_k]
+  \;=\; \Delta f(\vct{x}_k, \vct{s}_k) + b_k
   \;\ge\; \tfrac{1}{2}\mathrm{Pred}_k - \tfrac{1}{4}\mathrm{Pred}_k
   \;=\; \tfrac{1}{4}\mathrm{Pred}_k \;>\; 0.
 \]
-The deviation $\mathrm{Ared}_k - \mathbb{E}[\mathrm{Ared}_k \mid \mathcal{F}_{k-1}]$ is sub-Gaussian with variance proxy $2\sigma_\varepsilon^2 = 2R_{\mathrm{obs}}$. Hence, by the sub-Gaussian tail bound and the noise gate~\eqref{eq:noise-gate},
+Since $\mathrm{Ared}_k - \mathbb{E}_k[\mathrm{Ared}_k]$ is conditionally sub-Gaussian with variance proxy $2\sigma_\varepsilon^2 = 2R_{\mathrm{obs}}$, the sub-Gaussian tail bound and the acceptance criterion~\eqref{eq:noise-gate} give
 \begin{align*}
-  \mathbb{P}\bigl(\mathrm{Ared}_k < -\tfrac{\kappa_{\mathrm{tol}}}{2}\sqrt{2R_{\mathrm{obs}}} \,\big|\, \mathcal{F}_{k-1}\bigr)
+  \mathbb{P}_k\bigl(\mathrm{Ared}_k < -\tfrac{\kappa_{\mathrm{tol}}}{2}\sqrt{2R_{\mathrm{obs}}}\bigr)
   &\;\le\;
   \exp\Bigl(-\frac{\bigl(\tfrac{\kappa_{\mathrm{tol}}}{2}\sqrt{2R_{\mathrm{obs}}} + \tfrac{1}{4}\mathrm{Pred}_k\bigr)^2}{4R_{\mathrm{obs}}}\Bigr) \\
   &\;\le\;
   \exp\Bigl(-\frac{\tfrac{\kappa_{\mathrm{tol}}^2}{4}\,2R_{\mathrm{obs}}}{4R_{\mathrm{obs}}}\Bigr)
   \;=\; e^{-\kappa_{\mathrm{tol}}^2/8},
 \end{align*}
-where the last inequality uses $\mathrm{Pred}_k > 0$, and $p' \le \tfrac{1}{2}$ for $\kappa_{\mathrm{tol}} \ge \sqrt{8\ln 2}$ since $e^{-\ln 2} = \tfrac{1}{2}$.
+where the second inequality uses $\mathrm{Pred}_k > 0$. Finally, $p' \le \tfrac{1}{2}$ holds for $\kappa_{\mathrm{tol}} \ge \sqrt{8\ln 2}$.
 \end{proof}
 
-Lemma~\ref{lem:reject-prob} demonstrates that in the reliable regularization regime, trial step rejections are rare events with exponentially decaying probability $p' \le e^{-\kappa_{\mathrm{tol}}^2/8} \le \tfrac{1}{2}$. While this guarantees frequent successful steps in practice, establishing an almost-sure upper bound on $\sigma_k$ solely from this mechanism would require uniform geometric replenishment and lower bounds on $\mathbb{P}(r_k > \eta)$, which are difficult to verify a priori under arbitrary temporal drift. We therefore adopt regularization confinement as a standing assumption.
+When $\|\nabla f(\vct{x}_k)\|_2 \ge \varepsilon$ and the model gradient satisfies $\|\vct{g}_k\|_2 \ge \tfrac{1}{2}\varepsilon$, the threshold $\sigma^*(\vct{g}_k) = 4L_g^2 / \|\vct{g}_k\|_2$ is bounded above by $8L_g^2 / \varepsilon$. In deterministic cubic regularization, any step with $\sigma_k \ge 8L_g^2 / \varepsilon$ is accepted, and since a rejected step multiplies $\sigma_k$ by $\gamma_2$, the regularization weight never exceeds $\sigma_{\max} := \gamma_2 (8L_g^2 / \varepsilon)$. Under stochastic noise and temporal drift, Lemma~\ref{lem:reject-prob} shows that rejections above $\sigma^*(\vct{g}_k)$ occur with probability at most $e^{-\kappa_{\mathrm{tol}}^2/8}$, but deriving a deterministic upper bound on $\sigma_k$ from the random process alone would require uniform lower bounds on $\mathbb{P}_k(r_k > \eta)$ across arbitrary drift profiles. We therefore impose the following confinement condition.
 
 \begin{assumption}
 \label{ass:sigma-confinement}
-\textup{\textbf{(Regularization confinement.)}}
 For the target accuracy $\varepsilon > 0$ with $\varepsilon \le 8L_g^2/\sigma_0$ and $\kappa_{\mathrm{tol}} \ge \sqrt{8\ln 2}$, the regularization parameter satisfies
 \begin{equation}\label{eq:sigma-max}
   \sigma^*(\vct{g}_k) \;\le\; \sigma_k \;\le\; \sigma_{\max} \;:=\; \gamma_2\,\frac{8L_g^2}{\varepsilon},
@@ -171,61 +144,54 @@ For the target accuracy $\varepsilon > 0$ with $\varepsilon \le 8L_g^2/\sigma_0$
 throughout all iterations $k$ prior to termination, i.e., while $\min_{j \le k} \|\nabla f(\vct{x}_j)\|_2 \ge \varepsilon$.
 \end{assumption}
 
-Complementing the probabilistic rejection bound of Lemma~\ref{lem:reject-prob}, the following proposition provides a deterministic upper bound on the number of unsuccessful iterations along any sample trajectory under regularization confinement.
+Under Assumption~\ref{ass:sigma-confinement}, the number of rejected iterations is bounded linearly by the number of accepted iterations along any trajectory.
 
 \begin{proposition}
 \label{prop:rejected-bound}
-\textup{\textbf{(Bound on unsuccessful iterations.)}}
-Let $\mathcal{S}_K := \{k \le K : \text{iteration } k \text{ is accepted}\}$ and $\mathcal{U}_K := \{k \le K : \text{iteration } k \text{ is rejected}\}$ denote the index sets of successful and unsuccessful iterations up to iteration $K$, respectively. Then:
+Let $\mathcal{S}_K := \{0 \le k < K : \text{iteration } k \text{ is accepted}\}$ and $\mathcal{U}_K := \{0 \le k < K : \text{iteration } k \text{ is rejected}\}$ denote the index sets of successful and unsuccessful iterations among the first $K$ iterations, respectively. Under Assumption~\ref{ass:sigma-confinement},
 \begin{equation}\label{eq:rejected-count}
   |\mathcal{U}_K| \;\le\; \frac{\log \gamma_1}{\log \gamma_2}\,|\mathcal{S}_K| \;+\; \frac{1}{\log \gamma_2}\log\frac{\sigma_{\max}}{\sigma_0}.
 \end{equation}
 \end{proposition}
 
 \begin{proof}
-From the update rule in Algorithm~\ref{alg:tobyqa}, the weight decreases by $\gamma_1$ only on accepted iterations with $r_k > \eta$, is held fixed on accepted iterations with $r_k \le \eta$, and increases by $\gamma_2$ on rejected iterations. Let $N_1 \le |\mathcal{S}_K|$ denote the number of accepted iterations on which $r_k > \eta$. Taking logarithms and telescoping from $k = 0$ to $K-1$ gives
+In Algorithm~\ref{alg:tobyqa}, $\sigma_k$ is divided by $\gamma_1$ on accepted iterations with $r_k > \eta$, kept unchanged on accepted iterations with $r_k \le \eta$, and multiplied by $\gamma_2$ on rejected iterations. Let $N_1 \le |\mathcal{S}_K|$ be the number of accepted iterations in $\{0, \dots, K-1\}$ with $r_k > \eta$. Taking logarithms and telescoping from $k = 0$ to $K-1$ gives
 \[
   \log \sigma_K \;=\; \log \sigma_0 \;-\; N_1\,\log \gamma_1 \;+\; |\mathcal{U}_K|\,\log \gamma_2.
 \]
-Since $N_1 \le |\mathcal{S}_K|$ and $\sigma_K \le \sigma_{\max}$ by Assumption~\ref{ass:sigma-confinement}, rearranging yields
+Using $N_1 \le |\mathcal{S}_K|$ and $\sigma_K \le \sigma_{\max}$ from Assumption~\ref{ass:sigma-confinement}, we obtain
 \[
   |\mathcal{U}_K|\,\log \gamma_2
   \;=\; \log\frac{\sigma_K}{\sigma_0} + N_1 \log \gamma_1
-  \;\le\; \log\frac{\sigma_{\max}}{\sigma_0} + |\mathcal{S}_K|\,\log \gamma_1,
+  \;\le\; \log\frac{\sigma_{\max}}{\sigma_0} + |\mathcal{S}_K|\,\log \gamma_1.
 \]
-and dividing by $\log \gamma_2 > 0$ establishes~\eqref{eq:rejected-count}.
+Dividing by $\log \gamma_2 > 0$ yields~\eqref{eq:rejected-count}.
 \end{proof}
 
-\subsection{Iteration and Oracle Complexity}
-\label{sec:expected-complexity}
-
-We now state the iteration and oracle complexity bound for TOBYQA.
+We now establish the main iteration and evaluation complexity bound. Without repeated sampling at a fixed point, gradient errors below the observation-noise scale cannot be resolved; the target accuracy $\varepsilon$ is therefore required to exceed the noise floor $\varepsilon_{\mathrm{noise}}$, which matches the covariance-based termination threshold~\eqref{eq:stopping-rule}.
 
 \begin{theorem}
 \label{thm:main-complexity}
-\textup{\textbf{(Oracle call complexity.)}}
-Let Assumptions~\ref{ass:smoothness}--\ref{ass:sigma-confinement} hold. Let $\varepsilon > 0$ be any target gradient accuracy with $\varepsilon \le 8L_g^2/\sigma_0$ exceeding the statistical noise resolution floor
+Let Assumptions~\ref{ass:smoothness}--\ref{ass:sigma-confinement} hold. Let $\varepsilon > 0$ be any target gradient accuracy with $\varepsilon \le 8L_g^2/\sigma_0$ satisfying
 \begin{equation}\label{eq:noise-floor}
   \varepsilon \;\ge\; \varepsilon_{\mathrm{noise}} \;:=\; C_0\,\kappa_{eg}\,\max\Bigl\{\delta_{\mathrm{hi}},\; \frac{\sigma_\varepsilon}{\delta_{\mathrm{lo}}}\Bigr\},
 \end{equation}
-where $C_0 > 0$ is an absolute constant. Then the total number of iterations $K_\varepsilon$ (and consequently the number of oracle evaluations after initialization) required to achieve $\|\nabla f(\vct{x}_k)\|_2 \le \varepsilon$ satisfies
+where $C_0 > 0$ is an absolute constant. Then the number of iterations $K_\varepsilon$ (and thus of post-initialization function evaluations) required to reach $\|\nabla f(\vct{x}_k)\|_2 \le \varepsilon$ satisfies
 \begin{equation}\label{eq:complexity-rate}
   K_\varepsilon \;=\; O\Biggl(\frac{L_g\,\bigl(f(\vct{x}_0) - f_{\mathrm{low}}\bigr)}{\varepsilon^2}\Biggr).
 \end{equation}
 \end{theorem}
 
-The restriction $\varepsilon\ge\varepsilon_{\mathrm{noise}}$ reflects the statistical resolution of single noisy queries: without replication, reductions below the observation-noise scale cannot be reliably distinguished from random fluctuations. The posterior-covariance stopping rule in Algorithm~\ref{alg:tobyqa} is calibrated to this same scale.
-
 \begin{proof}
-Let $k \in \mathcal{S}_K$ be an accepted iteration prior to termination, which implies that $\|\nabla f(\vct{x}_k)\|_2 \ge \varepsilon$. Under Assumption~\ref{ass:fully-linear} and condition~\eqref{eq:noise-floor}, the gradient estimation error satisfies
+For any accepted step $k \in \mathcal{S}_K$ prior to termination, $\|\nabla f(\vct{x}_k)\|_2 \ge \varepsilon$. By Assumption~\ref{ass:fully-linear} and condition~\eqref{eq:noise-floor},
 \[
   \|\vct{g}_k - \nabla f(\vct{x}_k)\|_2 \;\le\; \kappa_{eg}\,\zeta_k \;\le\; \frac{\varepsilon}{C_0} \;\le\; \frac{\|\nabla f(\vct{x}_k)\|_2}{C_0}.
 \]
-Choosing $C_0 \ge 8$ gives $\|\vct{g}_k - \nabla f(\vct{x}_k)\|_2 \le \tfrac{1}{8}\|\nabla f(\vct{x}_k)\|_2$, so by the reverse triangle inequality,
+Setting $C_0 \ge 8$ gives $\|\vct{g}_k - \nabla f(\vct{x}_k)\|_2 \le \tfrac{1}{8}\|\nabla f(\vct{x}_k)\|_2$, and the reverse triangle inequality yields
 \[
   \|\vct{g}_k\|_2 \;\ge\; \|\nabla f(\vct{x}_k)\|_2 - \|\vct{g}_k - \nabla f(\vct{x}_k)\|_2 \;\ge\; \tfrac{7}{8}\|\nabla f(\vct{x}_k)\|_2 \;\ge\; \tfrac{1}{2}\,\varepsilon.
 \]
-Moreover, the model-error contribution satisfies
+Consequently, the gradient error term in~\eqref{eq:true-decrease-bound} satisfies
 \begin{align*}
   \|\vct{g}_k - \nabla f(\vct{x}_k)\|_2\,\|\vct{s}_k\|_2
   &\;\le\; \frac{\varepsilon}{C_0}\,\|\vct{s}_k\|_2
@@ -233,53 +199,49 @@ Moreover, the model-error contribution satisfies
   &\;=\; \frac{2}{C_0}\,\mathrm{Pred}_k
   \;\le\; \tfrac{1}{4}\,\mathrm{Pred}_k.
 \end{align*}
-Since $\sigma_k \ge \sigma^*(\vct{g}_k)$ by Assumption~\ref{ass:sigma-confinement}, Lemma~\ref{lem:reliable-sigma} guarantees that
+Since $\sigma_k \ge \sigma^*(\vct{g}_k)$ by Assumption~\ref{ass:sigma-confinement}, Lemma~\ref{lem:reliable-sigma} implies that
 \[
   f(\vct{x}_k) - f(\vct{x}_k + \vct{s}_k)
   \;\ge\; \tfrac{3}{4}\,\mathrm{Pred}_k - \|\vct{g}_k - \nabla f(\vct{x}_k)\|_2\,\|\vct{s}_k\|_2
   \;\ge\; \tfrac{1}{2}\,\mathrm{Pred}_k.
 \]
-On an accepted iteration $k \in \mathcal{S}_K$, the iterate updates to $\vct{x}_{k+1} = \vct{x}_k + \vct{s}_k$. Thus, using $\mathrm{Pred}_k = \|\vct{g}_k\|_2^{3/2} \sigma_k^{-1/2} \ge (\varepsilon/2)^{3/2} \sigma_{\max}^{-1/2}$ and the upper bound $\sigma_{\max} = \gamma_2 \frac{8L_g^2}{\varepsilon}$ from~\eqref{eq:sigma-max}, the objective reduction satisfies
+On an accepted iteration $k \in \mathcal{S}_K$, we have $\vct{x}_{k+1} = \vct{x}_k + \vct{s}_k$. Using $\mathrm{Pred}_k = \|\vct{g}_k\|_2^{3/2} \sigma_k^{-1/2} \ge (\varepsilon/2)^{3/2} \sigma_{\max}^{-1/2}$ together with $\sigma_{\max} = \gamma_2 \frac{8L_g^2}{\varepsilon}$ from~\eqref{eq:sigma-max} gives
 \begin{equation}\label{eq:per-step-descent}
   f(\vct{x}_k) - f(\vct{x}_{k+1})
   \;\ge\;
-  \tfrac{1}{4}\,\Bigl(\frac{\varepsilon}{2}\Bigr)^{3/2} \sqrt{\frac{\varepsilon}{8\gamma_2 L_g^2}}
-  \;\ge\;
+  \tfrac{1}{2}\,\Bigl(\frac{\varepsilon}{2}\Bigr)^{3/2} \sqrt{\frac{\varepsilon}{8\gamma_2 L_g^2}}
+  \;=\;
   c\,\frac{\varepsilon^2}{L_g},
 \end{equation}
-where $c = (32\sqrt{\gamma_2})^{-1} > 0$ is an absolute constant.
+where $c := (16\sqrt{\gamma_2})^{-1} > 0$.
 
-On rejected iterations $k \in \mathcal{U}_K$, the iterate remains unchanged ($\vct{x}_{k+1} = \vct{x}_k$), so $f(\vct{x}_k) - f(\vct{x}_{k+1}) = 0$. Summing the descent inequality~\eqref{eq:per-step-descent} over all accepted iterations up to iteration $K$ yields
+On rejected iterations $k \in \mathcal{U}_K$, the center is unchanged ($\vct{x}_{k+1} = \vct{x}_k$), so $f(\vct{x}_k) - f(\vct{x}_{k+1}) = 0$. Summing~\eqref{eq:per-step-descent} over all iterations up to $K$ yields
 \[
   f(\vct{x}_0) - f_{\mathrm{low}}
   \;\ge\; f(\vct{x}_0) - f(\vct{x}_K)
   \;=\; \sum_{k \in \mathcal{S}_K} \bigl(f(\vct{x}_k) - f(\vct{x}_{k+1})\bigr)
   \;\ge\; |\mathcal{S}_K|\,c\,\frac{\varepsilon^2}{L_g},
 \]
-whence the total number of accepted iterations satisfies
+and therefore
 \begin{equation}\label{eq:accepted-bound}
   |\mathcal{S}_K| \;\le\; \frac{1}{c}\,\frac{L_g\,\bigl(f(\vct{x}_0) - f_{\mathrm{low}}\bigr)}{\varepsilon^2}
   \;=\; O\Biggl(\frac{L_g\,\bigl(f(\vct{x}_0) - f_{\mathrm{low}}\bigr)}{\varepsilon^2}\Biggr).
 \end{equation}
-By Proposition~\ref{prop:rejected-bound}, the number of unsuccessful iterations is bounded by
+By Proposition~\ref{prop:rejected-bound} and $\sigma_{\max}/\sigma_0 = \gamma_2 (8L_g^2)/(\sigma_0\varepsilon) = O(\varepsilon^{-1})$, the number of rejected iterations satisfies
 \[
-  |\mathcal{U}_K| \;\le\; \frac{\log \gamma_1}{\log \gamma_2}\,|\mathcal{S}_K| \;+\; \frac{1}{\log \gamma_2}\log\frac{\sigma_{\max}}{\sigma_0}.
+  |\mathcal{U}_K| \;\le\; \frac{\log \gamma_1}{\log \gamma_2}\,|\mathcal{S}_K| \;+\; O(\log(\varepsilon^{-1})).
 \]
-Since $\sigma_{\max}/\sigma_0 = \gamma_2 (8L_g^2)/(\sigma_0\varepsilon) = O(\varepsilon^{-1})$, the additive logarithmic term satisfies
-\[
-  \frac{1}{\log \gamma_2}\log\frac{\sigma_{\max}}{\sigma_0} \;=\; O(\log(\varepsilon^{-1})),
-\]
-which is asymptotically dominated by $O(\varepsilon^{-2})$. Combining the bounds on successful and unsuccessful iterations gives
+Combining the bounds on $|\mathcal{S}_K|$ and $|\mathcal{U}_K|$ gives
 \[
   K_\varepsilon \;=\; |\mathcal{S}_K| + |\mathcal{U}_K| \;\le\; \Bigl(1 + \frac{\log \gamma_1}{\log \gamma_2}\Bigr)\,|\mathcal{S}_K| \;+\; O(\log(\varepsilon^{-1})) \;=\; O\Biggl(\frac{L_g\,\bigl(f(\vct{x}_0) - f_{\mathrm{low}}\bigr)}{\varepsilon^2}\Biggr).
 \]
-Since TOBYQA evaluates one new query per iteration after the initial $2n+1$ evaluations, the total number of oracle calls satisfies $N_{\mathrm{eval}} = 2n + 1 + K_\varepsilon = O(L_g(f(\vct{x}_0) - f_{\mathrm{low}})\varepsilon^{-2})$, completing the proof.
+Since Algorithm~\ref{alg:tobyqa} performs one function evaluation per iteration after the initial $2n+1$ stencil evaluations, the total evaluation complexity is $N_{\mathrm{eval}} = 2n + 1 + K_\varepsilon = O(L_g(f(\vct{x}_0) - f_{\mathrm{low}})\varepsilon^{-2})$.
 \end{proof}
 
 \begin{remark}
 \label{rem:optimality}
-\textup{\textbf{(Comparison with first-order complexity.)}}
-The rate $O(\varepsilon^{-2})$ in Theorem~\ref{thm:main-complexity} matches the information-theoretic lower bound for first-order methods on $C^{1,1}$ nonconvex objectives~\cite{CarmonDuchiHinderSidford2020}. This is consistent with the information available to TOBYQA at the budget $m=2n+1$: the active set supports a fully-linear model, but not an asymptotically accurate Hessian. The $O(\varepsilon^{-3/2})$ rate of derivative-based adaptive cubic regularization~\cite{NesterovPolyak2006,CartisGouldToint2011ARC,CartisGouldToint2011ARC2} requires $\|(H_k-\nabla^2f(\vct{x}_k))\vct{s}_k\|_2=O(\|\vct{s}_k\|_2^2)$~\cite[AM.4]{CartisGouldToint2011ARC}, whose recovery would generally require $O(n^2)$ samples. Under temporal drift, such a sample set also spans $O(n^2)$ time steps and incurs the nonlinear drift error quantified in Theorem~\ref{thm:nonlinear-drift}. TOBYQA instead uses an $O(n)$ active set, with a shorter temporal span and the first-order complexity rate.
+The $O(\varepsilon^{-2})$ rate in Theorem~\ref{thm:main-complexity} matches the optimal complexity of first-order methods on $C^{1,1}$ nonconvex objectives~\cite{CarmonDuchiHinderSidford2020}. With a linear sample budget $m=2n+1$, the active set provides a fully-linear gradient model rather than an accurate Hessian. Achieving the $O(\varepsilon^{-3/2})$ rate of second-order adaptive cubic regularization~\cite{NesterovPolyak2006,CartisGouldToint2011ARC,CartisGouldToint2011ARC2} requires $\|(H_k-\nabla^2f(\vct{x}_k))\vct{s}_k\|_2=O(\|\vct{s}_k\|_2^2)$~\cite[AM.4]{CartisGouldToint2011ARC}, which in the derivative-free setting demands $O(n^2)$ interpolation points. Under temporal drift, maintaining $O(n^2)$ sequential samples stretches the temporal span to $\tau_{\max} = O(n^2)$ and amplifies the nonlinear drift bias of Theorem~\ref{thm:nonlinear-drift} to $O(L_\mu n^4)$. By operating with $m=2n+1$ points and $H_k \equiv 0$, TOBYQA keeps $\tau_{\max} = O(n)$ and achieves the first-order complexity rate.
 \end{remark}
+
 
 

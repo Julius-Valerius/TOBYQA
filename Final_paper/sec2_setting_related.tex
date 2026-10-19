@@ -1,27 +1,23 @@
-\section{The TOBYQA Algorithm}
-\label{sec:algorithm}
+\section{Time-Augmented Interpolation Model}
+\label{sec:properties}
+\label{sec:augmented-model}
 
-This section describes the formulation of the TOBYQA algorithm, detailing the soft-constrained quadratic model, the cubic regularization step, and the algorithmic procedure.
-
-\subsection{The Soft-Constrained Quadratic Model}
+\phantomsection
+\subsection{Soft-Constrained Quadratic Model}
 \label{sec:kkt-derivation}
 
-We start with the model-based derivative-free framework used by NEWUOA~\cite{Powell2006NEWUOA}. At each iteration, NEWUOA maintains $m$ interpolation points around the current iterate and builds a quadratic model $Q \approx f$. The coefficients of $Q$---the symmetric Hessian, the gradient, and the constant term---have $(n+1)(n+2)/2$ degrees of freedom. Determining all coefficients from the interpolation equations $Q(\vct{x}_i) = F_i$, $i = 1, \dots, (n+1)(n+2)/2$, therefore requires a number of evaluations that grows quadratically with $n$. Powell instead proposed using fewer interpolation points~\cite{Powell2004LeastFrobenius}; NEWUOA commonly uses $m = 2n+1$. The interpolation conditions determine the constant and linear coefficients and provide partial curvature information, while the remaining freedom in the quadratic part is resolved by
+We build on the underdetermined interpolation framework introduced by Powell in NEWUOA~\cite{Powell2006NEWUOA}. At each iteration, NEWUOA maintains $m$ interpolation points around the current iterate and constructs a quadratic surrogate $Q \approx f$. Because a full quadratic model in $\mathbb{R}^n$ has $(n+1)(n+2)/2$ coefficients, determining all of them by exact interpolation requires $O(n^2)$ evaluations. Powell instead proposed using $m = 2n+1$ points~\cite{Powell2004LeastFrobenius}: the interpolation conditions $Q(\vct{x}_i) = F_i$ determine the constant and gradient while providing partial curvature information, and the remaining freedom in the Hessian is resolved by solving
 \[
   \min_{Q}\; \|\nabla^2 Q - \nabla^2 Q_{\mathrm{prev}}\|_F
-  \quad \text{subject to} \quad Q(\vct{x}_i) = F_i, \quad i = 1, \dots, m,
+  \quad \text{subject to} \quad Q(\vct{x}_i) = F_i, \quad i = 1, \dots, m.
 \]
-which selects, among the quadratics interpolating the samples, the model whose Hessian is closest to that of the previous iteration. Under standard poisedness conditions, this minimum-Frobenius-norm construction yields a unique model. The choice $m=O(n)$ also limits the temporal span of the interpolation set. Theorem~\ref{thm:nonlinear-drift} relates that span to the recovery bias under nonlinear drift.
+This construction presupposes a stationary, noiseless objective. Under the dynamic observation channel~\eqref{eq:oracle_intro}, sequential sampling interleaves spatial displacement with temporal evolution, so a static polynomial model projects temporal shifts onto spatial directions and biases the gradient. Moreover, enforcing $Q(\vct{x}_i) = F_i$ exactly propagates observation noise directly into the fitted coefficients.
 
-This interpolation system does not account for the observation channel~\eqref{eq:oracle_intro}. Because the samples are collected at different times, a static quadratic model can absorb temporal variation into its spatial coefficients. In addition, the hard conditions $Q(\vct{x}_i) = F_i$ pass observation noise directly into the fitted coefficients. TOBYQA addresses both effects by adding a time column to the model and replacing hard interpolation with a penalized fit.
-
-At iteration $k$, let $\vct{x}_k$ denote the current center and $t_k$ the timestamp at which it was evaluated. The algorithm maintains $m = 2n+1$ time-stamped samples in the active set $\mathcal{Y}_k$. For each $(\vct{x}_i,t_i,F_i)\in\mathcal{Y}_k$, define the spatial displacement $\vct{d}_i = \vct{x}_i - \vct{x}_k$ and temporal offset $\theta_i = t_i - t_k$. The center sample has $\theta_i=0$; the remaining offsets record the relative query times and may have either sign when the current center is not the most recently evaluated sample. Around the center $\vct{x}_k$, we seek a local quadratic-plus-linear-drift surrogate model
+TOBYQA addresses both issues by augmenting the quadratic model with a linear temporal term and replacing exact interpolation with a regularized least-squares fit. At iteration $k$, let $\vct{x}_k$ be the current center and $t_k$ its evaluation timestamp. Given the active set $\mathcal{Y}_k = \{(\vct{x}_i, t_i, F_i)\}_{i=1}^m$ of $m = 2n+1$ samples, we center the spatial displacements $\vct{d}_i := \vct{x}_i - \vct{x}_k$ and temporal offsets $\theta_i := t_i - t_k$ at $(\vct{x}_k, t_k)$, and consider the time-augmented model
 \begin{equation}\label{eq:Q-model}
   Q_k(\vct{x},t) \;=\; c + \vct{g}^{\!\top}(\vct{x} - \vct{x}_k) + \tfrac{1}{2}(\vct{x} - \vct{x}_k)^{\!\top}G\,(\vct{x} - \vct{x}_k) + \gamma\,(t - t_k),
 \end{equation}
-with unknowns $c\in\mathbb{R}$, $\vct{g}\in\mathbb{R}^n$, symmetric Hessian $G = G^\top\in\mathbb{R}^{n\times n}$, and temporal coefficient $\gamma\in\mathbb{R}$. Here $\gamma$ describes the local rate of change of the observation channel. Because it is estimated together with $(c,\vct{g},G)$, variation that is linear in time is represented explicitly rather than folded into the spatial model.
-
-The model is determined by the variational problem
+where $c = Q_k(\vct{x}_k, t_k) \in \mathbb{R}$, $\vct{g} = \nabla_{\vct{x}} Q_k(\vct{x}_k, t_k) \in \mathbb{R}^n$, and $\gamma = \partial_t Q_k(\vct{x}_k, t_k) \in \mathbb{R}$ represent the local function value, spatial gradient, and instantaneous drift rate at $(\vct{x}_k, t_k)$, and $G = G^\top \in \mathbb{R}^{n\times n}$ is the symmetric model Hessian. To accommodate observation noise, we fit these parameters by solving
 \begin{equation}\label{eq:soft-obj}
   \min_{c,\,\vct{g},\,G=G^\top,\,\gamma}\;
   \tfrac{1}{4}\|G\|_F^2
@@ -29,36 +25,35 @@ The model is determined by the variational problem
   \tfrac{\rho}{2}\sum_{i=1}^{m}
   \bigl(Q_k(\vct{x}_i, t_i) - F_i\bigr)^2,
 \end{equation}
-where $\rho>0$ controls the balance between curvature regularization and data fitting. The Frobenius penalty favors a model with modest curvature, while the least-squares term accommodates noise by allowing the observations to be fitted inexactly. We regularize $G$ itself, rather than its change from the preceding model, because the preceding curvature was fitted on an earlier temporal baseline. With the factor $1/4$, the KKT reduction below produces the classical kernel $A_{ij}=\tfrac{1}{2}(\vct{d}_i^\top \vct{d}_j)^2$.
+where $\rho>0$ balances curvature regularization against data fitting. Unlike NEWUOA, which penalizes the incremental change $\|\nabla^2 Q - \nabla^2 Q_{\mathrm{prev}}\|_F$ to accumulate second-order information across iterations, problem~\eqref{eq:soft-obj} penalizes $\tfrac{1}{4}\|G\|_F^2$ directly. In a time-varying channel, the previous Hessian $G_{\mathrm{prev}} = \nabla^2 Q_{k-1}$ was fitted around an earlier timestamp $t_{k-1}$ and absorbs unmodeled nonlinear drift from past iterations; penalizing $\|G - G_{\mathrm{prev}}\|_F^2$ would lock these historical drift errors into the KKT right-hand side even after the old samples themselves are discarded from $\mathcal{Y}_k$. Penalizing $\tfrac{1}{4}\|G\|_F^2$ resets the curvature prior at each iteration and prevents cross-iteration drift accumulation (see the ablation study in Section~\ref{sec:ablations}, Table~\ref{tab:ablation}).
 
-Introduce the residuals $\xi_i:=F_i-Q_k(\vct{x}_i,t_i)$. Then~\eqref{eq:soft-obj} is equivalently written as
+Solving~\eqref{eq:soft-obj} directly in the primal variables would require optimizing over the $n(n+1)/2$ independent entries of $G$. To reduce the dimension of the linear system from $O(n^2)$ to $O(n)$, we pass to a dual representation of $G$ by introducing the fitting residuals $\xi_i := F_i - Q_k(\vct{x}_i, t_i)$ and rewriting~\eqref{eq:soft-obj} as the constrained problem
 \begin{equation}\label{eq:soft-constrained}
   \min_{c,\,\vct{g},\,G=G^\top,\,\gamma,\,\vct{\xi}}\;
   \tfrac{1}{4}\|G\|_F^2 + \tfrac{\rho}{2}\sum_{i=1}^m \xi_i^2
   \quad \text{s.t.} \quad Q_k(\vct{x}_i, t_i) + \xi_i = F_i, \;\; i = 1, \dots, m,
 \end{equation}
-Attaching Lagrange multipliers $\lambda_i$ to the observation constraints yields the Lagrangian
+with Lagrangian
 \begin{equation}\label{eq:lagrangian}
   \mathcal{L}(c, \vct{g}, G, \gamma, \vct{\xi}, \vct{\lambda})
   \;=\;
   \tfrac{1}{4}\|G\|_F^2 + \tfrac{\rho}{2}\sum_{i=1}^m \xi_i^2
   - \sum_{i=1}^m \lambda_i \Bigl(Q_k(\vct{x}_i, t_i) + \xi_i - F_i\Bigr).
 \end{equation}
-Setting the partial derivatives of $\mathcal{L}$ with respect to the primal variables to zero yields the KKT stationarity conditions:
+Setting the partial derivatives of $\mathcal{L}$ with respect to the primal variables to zero gives the first-order optimality conditions:
 \begin{align}
   \nabla_G \mathcal{L} = 0 &\implies G \;=\; \sum_{i=1}^m \lambda_i\,\vct{d}_i\,\vct{d}_i^{\!\top}, \label{eq:stat-G} \\
   \nabla_c \mathcal{L} = 0 &\implies \sum_{i=1}^m \lambda_i \;=\; 0, \label{eq:stat-c} \\
   \nabla_{\vct{g}} \mathcal{L} = 0 &\implies \sum_{i=1}^m \lambda_i \vct{d}_i \;=\; \vct{0}, \label{eq:stat-g} \\
   \nabla_\gamma \mathcal{L} = 0 &\implies \sum_{i=1}^m \lambda_i \theta_i \;=\; 0, \label{eq:stat-gamma} \\
-  \nabla_{\xi_i} \mathcal{L} = 0 &\implies \rho\,\xi_i \;=\; \lambda_i \iff \xi_i \;=\; \tfrac{1}{\rho}\lambda_i. \label{eq:stat-xi}
+  \nabla_{\xi_i} \mathcal{L} = 0 &\implies \xi_i \;=\; \tfrac{1}{\rho}\lambda_i. \label{eq:stat-xi}
 \end{align}
-The relation $\lambda_i=\rho\xi_i$ ties the multipliers directly to the residuals. The remaining conditions state that $\vct{\lambda}$ is orthogonal to the constant, spatial-linear, and temporal-linear columns of the model. In particular, $\sum_i\lambda_i\theta_i=0$ is the extra condition introduced by the time column. It separates a linear temporal component from the spatial fit and leads to the drift-decoupling result in Section~\ref{sec:properties}.
-
-Substituting $\xi_i = \lambda_i/\rho$ and~\eqref{eq:stat-G} into the constraint equations gives, for each $i = 1, \dots, m$, the interpolation relation
+Identity~\eqref{eq:stat-G} expresses the $n\times n$ matrix $G$ in terms of the $m$ dual multipliers $\vct{\lambda} = (\lambda_1, \dots, \lambda_m)^\top$. Substituting~\eqref{eq:stat-G} and $\xi_i = \lambda_i/\rho$ into $Q_k(\vct{x}_i, t_i) + \xi_i = F_i$ yields
 \begin{equation}\label{eq:row-i}
-  \tfrac{1}{2}\sum_{j=1}^m \lambda_j (\vct{d}_i^\top \vct{d}_j)^2 + c + \vct{d}_i^\top \vct{g} + \gamma \theta_i + \tfrac{1}{\rho}\lambda_i \;=\; F_i.
+  \tfrac{1}{2}\sum_{j=1}^m \lambda_j (\vct{d}_i^\top \vct{d}_j)^2 + c + \vct{d}_i^\top \vct{g} + \gamma \theta_i + \tfrac{1}{\rho}\lambda_i \;=\; F_i,
+  \qquad i = 1, \dots, m.
 \end{equation}
-Combining~\eqref{eq:row-i} with the three orthogonality constraints~\eqref{eq:stat-c}, \eqref{eq:stat-g}, and~\eqref{eq:stat-gamma}, we obtain the augmented KKT linear system
+Combining~\eqref{eq:row-i} with the orthogonality conditions~\eqref{eq:stat-c}--\eqref{eq:stat-gamma} produces the $(m+n+2)\times(m+n+2)$ saddle-point system
 \begin{equation}\label{eq:tobyqa-kkt}
   \begin{bmatrix}
      A + \tfrac{1}{\rho}I_m & \mathbf{1}_m & D & \vct{\theta} \\
@@ -70,92 +65,228 @@ Combining~\eqref{eq:row-i} with the three orthogonality constraints~\eqref{eq:st
   \;=\;
   \begin{bmatrix}\vct{F}\\0\\\vct{0}\\0\end{bmatrix},
 \end{equation}
-whose coefficient matrix we denote by $M$. Here $A \in \mathbb{R}^{m\times m}$ has entries $A_{ij} = \tfrac{1}{2}(\vct{d}_i^\top \vct{d}_j)^2$, $D \in \mathbb{R}^{m\times n}$ has rows $\vct{d}_i^\top$, $\vct{\theta} = (\theta_1, \dots, \theta_m)^\top \in \mathbb{R}^m$, $\mathbf{1}_m$ is the all-ones vector, and $\vct{F} = (F_1, \dots, F_m)^\top$. We denote the augmented constraint block by
+where $A \in \mathbb{R}^{m\times m}$ has entries $A_{ij} = \tfrac{1}{2}(\vct{d}_i^\top \vct{d}_j)^2$, $D \in \mathbb{R}^{m\times n}$ has rows $\vct{d}_i^\top$, $\vct{\theta} = (\theta_1, \dots, \theta_m)^\top \in \mathbb{R}^m$, and $\vct{F} = (F_1, \dots, F_m)^\top$. We denote the augmented constraint block by
 \begin{equation}\label{eq:Xaug-def}
   X_{\mathrm{aug}} \;:=\;
   \begin{bmatrix}\mathbf{1}_m & D & \vct{\theta}\end{bmatrix}
-  \;\in\;\mathbb{R}^{m\times(n+2)},
+  \;\in\;\mathbb{R}^{m\times(n+2)}.
 \end{equation}
-whose first $n+1$ columns form the constraint block of the classical NEWUOA system, and whose last column $\vct{\theta}$ provides the temporal extension that enables the joint recovery of the drift rate $\gamma$.
 
-\subsection{Cubic Regularization Step and Step Acceptance}
-\label{sec:arc-decision}
+\subsection{Solvability of the KKT System}
+\label{sec:well-posedness}
 
-Given the recovered gradient $\vct{g}_k$, TOBYQA computes the trial step from
-\begin{equation}\label{eq:arc-subproblem}
-  \min_{\vct{s} \in \mathbb{R}^n} m_k(\vct{s}) \;:=\; \vct{g}_k^\top \vct{s} + \tfrac{\sigma_k}{3} \|\vct{s}\|_2^3,
+To compute $(c, \vct{g}, \gamma)$ from~\eqref{eq:tobyqa-kkt} at each iteration, we now establish when the linear system is uniquely solvable and derive an explicit expression for the primal parameters. Writing $K := A + \rho^{-1} I_m$, the coefficient matrix of~\eqref{eq:tobyqa-kkt} takes the block form
+\begin{equation}\label{eq:M-block}
+  M \;=\;
+  \begin{bmatrix}
+    K & X_{\mathrm{aug}} \\
+    X_{\mathrm{aug}}^\top & 0
+  \end{bmatrix}.
 \end{equation}
-where $\sigma_k>0$ controls the step length. Problem~\eqref{eq:arc-subproblem} has the closed-form solution
-\begin{equation}\label{eq:closed-form-step}
-  \vct{s}_k \;=\; -\frac{\vct{g}_k}{\sqrt{\sigma_k \|\vct{g}_k\|_2}},
+For a saddle-point matrix of the form~\eqref{eq:M-block} with symmetric positive definite $K$, block Gaussian elimination shows that $M$ is nonsingular if and only if the Schur complement $S := X_{\mathrm{aug}}^\top K^{-1} X_{\mathrm{aug}}$ is nonsingular, which holds if and only if $X_{\mathrm{aug}}$ has full column rank. We therefore impose the following rank condition on the active set.
+
+\begin{definition}
+\label{def:rank}
+The active set $\mathcal{Y}_k = \{(\vct{x}_i, t_i, F_i)\}_{i=1}^m$ satisfies the augmented column-rank condition if
+\begin{equation}\label{eq:full-rank}
+  \operatorname{rank}(X_{\mathrm{aug}}) \;=\; n + 2,
+\end{equation}
+that is, the constant vector $\mathbf{1}_m$, the spatial displacement columns of $D$, and the temporal offset vector $\vct{\theta}$ are linearly independent.
+\end{definition}
+
+\begin{proposition}
+\label{prop:solvability}
+Let $K = A + \rho^{-1} I_m \in \mathbb{R}^{m\times m}$, where $A_{ij} = \tfrac{1}{2}(\vct{d}_i^\top \vct{d}_j)^2$ and $\rho > 0$. Then:
+\begin{enumerate}[\rm(i)]
+  \item $K$ is symmetric and strictly positive definite ($K \succ 0$).
+  \item If $\mathcal{Y}_k$ satisfies Definition~\ref{def:rank}, the Schur complement
+  \begin{equation}\label{eq:schur-S}
+    S \;:=\; X_{\mathrm{aug}}^\top K^{-1} X_{\mathrm{aug}} \;\in\; \mathbb{R}^{(n+2)\times(n+2)}
+  \end{equation}
+  is symmetric and strictly positive definite ($S \succ 0$).
+  \item The matrix $M$ in~\eqref{eq:M-block} is nonsingular, and the unique primal solution is given by
+  \begin{equation}\label{eq:primal-sol}
+    \begin{bmatrix}c\\\vct{g}\\\gamma\end{bmatrix}
+    \;=\;
+    S^{-1} X_{\mathrm{aug}}^\top K^{-1} \vct{F}
+    \;=:\;
+    \Pi \vct{F},
+  \end{equation}
+  where $\Pi := S^{-1} X_{\mathrm{aug}}^\top K^{-1} \in \mathbb{R}^{(n+2)\times m}$ is the linear recovery operator. The dual variable is $\vct{\lambda} = K^{-1}(\vct{F} - X_{\mathrm{aug}} \Pi \vct{F})$.
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}
+For part (i), let $\vct{v} \in \mathbb{R}^{m}$ be nonzero. Since each entry of $A$ satisfies
+\[
+  A_{ij} \;=\; \tfrac{1}{2}(\vct{d}_i^\top \vct{d}_j)^2 \;=\; \tfrac{1}{2}\operatorname{tr}\bigl((\vct{d}_i \vct{d}_i^\top)(\vct{d}_j \vct{d}_j^\top)\bigr),
+\]
+$A$ is the Gram matrix of the rank-one matrices $\{\tfrac{1}{\sqrt{2}} \vct{d}_i \vct{d}_i^\top\}_{i=1}^m$ under the Frobenius inner product, so $A \succeq 0$. For any $\rho > 0$, $\vct{v}^\top K \vct{v} = \vct{v}^\top A \vct{v} + \rho^{-1}\|\vct{v}\|_2^2 \ge \rho^{-1}\|\vct{v}\|_2^2 > 0$, which proves $K \succ 0$.
+
+For part (ii), let $\vct{u} \in \mathbb{R}^{n+2}$ be nonzero. By Definition~\ref{def:rank}, $X_{\mathrm{aug}}$ has full column rank, so $\vct{w} := X_{\mathrm{aug}} \vct{u} \ne \vct{0}$. Because $K \succ 0$, its inverse $K^{-1} \succ 0$. Hence $\vct{u}^\top S \vct{u} = \vct{w}^\top K^{-1} \vct{w} > 0$, which proves that $S \succ 0$.
+
+For part (iii), the saddle-point matrix $M$ has invertible upper-left block $K$ and invertible Schur complement $-S$. Setting $\vct{p} := [c, \vct{g}^\top, \gamma]^\top$, standard block elimination yields $\vct{\lambda} = K^{-1}(\vct{F} - X_{\mathrm{aug}}\vct{p})$. Substituting this into $X_{\mathrm{aug}}^\top \vct{\lambda} = \vct{0}$ gives $S \vct{p} = X_{\mathrm{aug}}^\top K^{-1} \vct{F}$, which yields~\eqref{eq:primal-sol}.
+\end{proof}
+
+\begin{remark}
+\label{rem:poisedness}
+In unregularized minimum-Frobenius-norm interpolation~\cite{ConnScheinbergVicente2009,Powell2006NEWUOA}, the upper-left block $A$ is only positive semidefinite, so nonsingularity of the KKT matrix requires $A$ to be positive definite on the null space of $X_{\mathrm{aug}}^\top$ (quadratic poisedness). Here, the ridge term $\rho^{-1} I_m$ ensures $K \succ 0$ on all of $\mathbb{R}^m$, reducing solvability to the first-order rank condition~\eqref{eq:full-rank}.
+\end{remark}
+
+Geometrically, condition~\eqref{eq:full-rank} requires that the spatial displacements span $\mathbb{R}^n$ and that the temporal offset vector $\vct{\theta}$ not lie in $\operatorname{span}\{\mathbf{1}_m, D\}$, so that elapsed time is not an affine function of spatial position across the sample set. The next result verifies that the initial coordinate stencil used by TOBYQA automatically satisfies this requirement under sequential evaluation.
+
+\begin{corollary}
+\label{cor:axis-rank}
+Let $\mathcal{Y}_0 = \{(\vct{x}_i, t_i, F_i)\}_{i=1}^{2n+1}$ be the initial active set formed by evaluating the coordinate stencil $\{\vct{x}_0\} \cup \{\vct{x}_0 \pm \Delta_0 \vct{e}_j\}_{j=1}^n$ at strictly increasing timestamps $t_1 < t_2 < \dots < t_{2n+1}$, with $\vct{x}_1 = \vct{x}_0$ evaluated at $t_1$. Then $\operatorname{rank}(X_{\mathrm{aug}}) = n + 2$.
+\end{corollary}
+
+\begin{proof}
+In the displacement matrix $D \in \mathbb{R}^{(2n+1)\times n}$, the rows for $\vct{x}_0 \pm \Delta_0 \vct{e}_j$ are $\pm\Delta_0 \vct{e}_j^\top$, so the columns of $D$ are linearly independent and $\operatorname{rank}(D) = n$. Moreover, the row of $D$ at the center sample is zero while the corresponding entry of $\mathbf{1}_{2n+1}$ is one, so $\mathbf{1}_{2n+1}$ is independent of the columns of $D$. Hence $\operatorname{rank}([\mathbf{1}_{2n+1} \;\; D]) = n+1$.
+
+Suppose, for contradiction, that $\vct{\theta} \in \operatorname{span}\{\mathbf{1}_{2n+1}, D\}$, so that $\theta_i = \alpha + \vct{\beta}^\top \vct{d}_i$ for some $\alpha \in \mathbb{R}$ and $\vct{\beta} \in \mathbb{R}^n$. The center row gives $\alpha = \theta_1 = 0$. Applying this to the $j$-th probe pair, whose displacements are $\pm\Delta_0 \vct{e}_j$ and whose offsets are $\theta_{2j}$ and $\theta_{2j+1}$, gives
+\[
+  \theta_{2j} = \alpha + \Delta_0 \beta_j,
   \qquad
-  \|\vct{s}_k\|_2 \;=\; \sqrt{\frac{\|\vct{g}_k\|_2}{\sigma_k}},
-\end{equation}
-whose computation requires only $O(n)$ arithmetic operations. The predicted reduction used in the acceptance test below is the decrease of the \emph{linear} part of the model, which excludes the cubic regularization term:
-\begin{equation}\label{eq:pred-def}
-  \mathrm{Pred}_k \;:=\; -\,\vct{g}_k^{\top} \vct{s}_k \;=\; \|\vct{g}_k\|_2^{3/2} \sigma_k^{-1/2} \;=\; \|\vct{g}_k\|_2 \|\vct{s}_k\|_2.
-\end{equation}
+  \theta_{2j+1} = \alpha - \Delta_0 \beta_j
+  \qquad\Longrightarrow\qquad
+  \alpha = \tfrac{1}{2}\bigl(\theta_{2j} + \theta_{2j+1}\bigr).
+\]
+Because probe timestamps strictly succeed the center timestamp, $\tfrac{1}{2}(\theta_{2j}+\theta_{2j+1}) > 0$, contradicting $\alpha = 0$. Therefore $\vct{\theta} \notin \operatorname{span}\{\mathbf{1}_{2n+1}, D\}$, and $\operatorname{rank}(X_{\mathrm{aug}}) = n+2$.
+\end{proof}
 
-Evaluating the candidate point $\vct{x}_k + \vct{s}_k$ through the observation channel at timestamp $t_{\mathrm{new}}$ returns $F_{\mathrm{new}} := F(\vct{x}_k + \vct{s}_k, t_{\mathrm{new}})$. To account for the channel variation over the query interval $\Delta t = t_{\mathrm{new}} - t_k$, we use the recovered temporal coefficient $\gamma$ to define the \emph{drift-compensated actual reduction}:
-\begin{equation}\label{eq:ared-def}
-  \mathrm{Ared}_k \;:=\; (F_k - F_{\mathrm{new}}) + \gamma\,(t_{\mathrm{new}} - t_k),
+\subsection{Gradient Estimation under Drift}
+\label{sec:drift-decoupling}
+
+Having obtained the explicit estimator $[c, \vct{g}^\top, \gamma]^\top = \Pi \vct{F}$ in~\eqref{eq:primal-sol}, we now examine how temporal drift in the observations $\vct{F}$ affects the recovered spatial gradient $\vct{g}$ and drift rate $\gamma$. From~\eqref{eq:schur-S} and~\eqref{eq:primal-sol}, the recovery operator $\Pi = S^{-1} X_{\mathrm{aug}}^\top K^{-1}$ is a left inverse of the augmented constraint matrix:
+\begin{equation}\label{eq:left-inverse}
+  \Pi X_{\mathrm{aug}} \;=\; S^{-1} \bigl(X_{\mathrm{aug}}^\top K^{-1} X_{\mathrm{aug}}\bigr) \;=\; I_{n+2}.
 \end{equation}
-where $F_k := F(\vct{x}_k, t_k)$ is the observation at the current center. Since $\mathrm{Ared}_k$ contains two independent observation noise terms---$\varepsilon(\vct{x}_k, t_k)$ in $F_k$ and $\varepsilon(\vct{x}_k + \vct{s}_k, t_{\mathrm{new}})$ in $F_{\mathrm{new}}$---its stochastic component has variance $2 R_{\mathrm{obs}}$. We therefore use the noise-gated acceptance criterion
-\begin{equation}\label{eq:noise-gate}
-  \mathrm{Ared}_k \;\ge\; -\frac{\kappa_{\mathrm{tol}}}{2} \sqrt{2 R_{\mathrm{obs}}},
+Because $\mathbf{1}_m$ is the first column of $X_{\mathrm{aug}}$ and $\vct{\theta}$ is the $(n+2)$-nd column, identity~\eqref{eq:left-inverse} implies $\Pi \mathbf{1}_m = \vct{e}_1$ and $\Pi \vct{\theta} = \vct{e}_{n+2}$. Any constant or linear-in-time component in $\vct{F}$ is therefore mapped entirely into the $c$- and $\gamma$-coordinates, with zero contribution to the gradient coordinates $\vct{g}$.
+
+\begin{theorem}
+\label{thm:exact-decoupling}
+Suppose the observation channel exhibits affine drift:
+\begin{equation}\label{eq:affine-channel}
+  F(\vct{x}, t) \;=\; f(\vct{x}) + \beta\,t + \varepsilon(\vct{x},t),
 \end{equation}
-where $R_{\mathrm{obs}} = \sigma_\varepsilon^2$ is the observation noise variance and $\kappa_{\mathrm{tol}} > 0$ is a stationarity tolerance. When~\eqref{eq:noise-gate} holds, the center advances to $\vct{x}_{k+1} = \vct{x}_k + \vct{s}_k$ with $t_{k+1} = t_{\mathrm{new}}$ and $F_{k+1} = F_{\mathrm{new}}$. If the ratio $r_k := \mathrm{Ared}_k / \mathrm{Pred}_k$ exceeds $\eta = 0.75$, the regularization parameter is decreased according to $\sigma_{k+1} = \sigma_k / \gamma_1$, where $\gamma_1 > 1$; otherwise it is held fixed. If~\eqref{eq:noise-gate} is violated, the step is rejected, the incumbent center remains unchanged ($(\vct{x}_{k+1}, t_{k+1}, F_{k+1}) = (\vct{x}_k, t_k, F_k)$), and $\sigma_{k+1} = \gamma_2 \sigma_k$ with $\gamma_2 > 1$.
-
-Each trial evaluation is retained in the active set. To keep its size fixed at $m=2n+1$, the sample at the current center is protected and the oldest of the remaining samples is replaced. The resulting temporal span $\tau_{\max}:=\max_i|t_i-t_k|$ appears in the nonlinear-drift error bound of Theorem~\ref{thm:nonlinear-drift}.
-
-Finally, the algorithm terminates based on a statistical stationarity criterion derived from the posterior covariance of the KKT solve. By Proposition~\ref{prop:solvability} below, the primal parameters admit the explicit representation $(c, \vct{g}^\top, \gamma)^\top = \Pi \vct{F}$ with the recovery operator $\Pi = S^{-1} X_{\mathrm{aug}}^\top K^{-1}$, where $S = X_{\mathrm{aug}}^\top K^{-1} X_{\mathrm{aug}}$ and $K = A + \tfrac{1}{\rho} I_m$. If the observation noise were the only error source, i.e., if $\vct{F}$ carried the white covariance $R_{\mathrm{obs}} I_m$, the recovered parameters would inherit the covariance
-\begin{equation}\label{eq:pnorm-def}
-  \mathrm{Cov}\bigl(\Pi \vct{F}\bigr)
-  \;=\; R_{\mathrm{obs}}\, S^{-1} \bigl(X_{\mathrm{aug}}^\top K^{-2} X_{\mathrm{aug}}\bigr) S^{-1}
-  \;=:\; R_{\mathrm{obs}}\, P_{\mathrm{norm}},
+for some unknown drift rate $\beta \in \mathbb{R}$. Let $\vct{F}^{\mathrm{stat}} := \vct{F} - \beta \vct{t} \in \mathbb{R}^m$ denote the static observations that would be obtained in the absence of drift, and let $[c^{\mathrm{stat}}, (\vct{g}^{\mathrm{stat}})^\top, \gamma^{\mathrm{stat}}]^\top := \Pi \vct{F}^{\mathrm{stat}}$ be the model parameters recovered from $\vct{F}^{\mathrm{stat}}$. If $\operatorname{rank}(X_{\mathrm{aug}}) = n+2$, then the parameters recovered by TOBYQA from the drifting observations $\vct{F}$ satisfy:
+\begin{equation}\label{eq:decoupling-identity}
+  \vct{g} \;=\; \vct{g}^{\mathrm{stat}},
+  \qquad
+  \gamma \;=\; \gamma^{\mathrm{stat}} + \beta,
+  \qquad
+  c \;=\; c^{\mathrm{stat}} + \beta\,t_k.
 \end{equation}
-  a normalized covariance matrix that scales linearly with the noise level; writing $B := X_{\mathrm{aug}}^\top K^{-2} X_{\mathrm{aug}}$, we have $P_{\mathrm{norm}} = S^{-1} B S^{-1}$. In particular, the covariance contribution to the estimated spatial gradient is $R_{\mathrm{obs}} [P_{\mathrm{norm}}]_{gg}$. The algorithm declares convergence when the recovered gradient norm falls below the corresponding uncertainty level:
-\begin{equation}\label{eq:stopping-rule}
-  \|\vct{g}_k\|_2 \;<\; \kappa_{\mathrm{tol}} \sqrt{\mathrm{tr}\bigl(R_{\mathrm{obs}} [P_{\mathrm{norm}}]_{gg}\bigr)}.
+\end{theorem}
+
+\begin{proof}
+Let $\vct{t} = (t_1, \dots, t_m)^\top \in \mathbb{R}^m$ be the vector of query timestamps. Because $t_i = t_k + \theta_i$, we can write $\vct{t}$ in terms of the columns of $X_{\mathrm{aug}} = [\mathbf{1}_m \;\; D \;\; \vct{\theta}]$:
+\begin{equation}\label{eq:t-decomp}
+  \vct{t} \;=\; t_k\,\mathbf{1}_m + \vct{\theta} \;=\; X_{\mathrm{aug}}\,(t_k \vct{e}_1 + \vct{e}_{n+2}),
 \end{equation}
-To prevent ill-conditioned sample geometries from inflating the trace of $P_{\mathrm{norm}}$ and triggering premature termination, condition~\eqref{eq:stopping-rule} is evaluated only when $\mathrm{tr}(P_{\mathrm{norm}}) \le \kappa_{\mathrm{geom}} \cdot \mathrm{tr}(P_{\mathrm{baseline}})$ (with default $\kappa_{\mathrm{geom}} = 5$), where $P_{\mathrm{baseline}}$ is computed at the initial coordinate configuration. The iteration also terminates if the trial step stagnates below numerical precision: $\|\vct{s}_k\|_2 < 10^{-14} \max(\|\vct{x}_k\|_2, 1)$.
+where $\vct{e}_1 = (1, 0, \dots, 0)^\top$ and $\vct{e}_{n+2} = (0, \dots, 0, 1)^\top$ in $\mathbb{R}^{n+2}$.
+Applying $\Pi$ to $\vct{F} = \vct{F}^{\mathrm{stat}} + \beta \vct{t}$ and using~\eqref{eq:left-inverse} yields
+\begin{align*}
+  \begin{bmatrix}c\\\vct{g}\\\gamma\end{bmatrix}
+  \;=\; \Pi \vct{F}
+  &\;=\; \Pi \vct{F}^{\mathrm{stat}} + \beta\,\Pi X_{\mathrm{aug}}\,(t_k \vct{e}_1 + \vct{e}_{n+2}) \\
+  &\;=\; \begin{bmatrix}c^{\mathrm{stat}}\\\vct{g}^{\mathrm{stat}}\\\gamma^{\mathrm{stat}}\end{bmatrix}
+  + \beta\,(t_k \vct{e}_1 + \vct{e}_{n+2})
+  \;=\; \begin{bmatrix}c^{\mathrm{stat}} + \beta t_k\\\vct{g}^{\mathrm{stat}}\\\gamma^{\mathrm{stat}} + \beta\end{bmatrix},
+\end{align*}
+which gives~\eqref{eq:decoupling-identity}.
+\end{proof}
 
-\subsection{Algorithm Summary}
-\label{sec:algo-complete}
+\begin{remark}
+\label{rem:significance}
+Theorem~\ref{thm:exact-decoupling} is an instance of the Frisch--Waugh--Lovell theorem~\cite{FrischWaugh1933,Lovell1963} in weighted least squares: including the temporal offset $\vct{\theta}$ as an explicit regressor projects out linear temporal trends for any drift rate $\beta$, any noise realization, and any sample radius.
+\end{remark}
 
-Algorithm~\ref{alg:tobyqa} summarizes the resulting procedure. The default algorithmic parameters are set to $\Delta_0=2$, $\gamma_1=2$, $\gamma_2=1.2$, $\eta=0.75$, $\kappa_{\mathrm{tol}}=3$, and $\kappa_{\mathrm{geom}}=5$. In practical implementation, standard safeguards against floating-point underflow and severe ill-conditioning are applied (e.g., bounding $\rho$ within $[10^2, 10^{14}]$ and lower-bounding scale estimates by machine precision).
+When the drift $\mu(t)$ is nonlinear, its Taylor expansion around $t_k$ decomposes into an affine component $\mu(t_k) + \mu'(t_k)(t - t_k)$ plus a second-order remainder. By~\eqref{eq:left-inverse}, the recovery operator $\Pi$ still annihilates the affine component, so the estimation bias in $\vct{g}$ and $\gamma$ is determined solely by the second-order temporal remainder across the active set.
 
-\begin{algorithm}[t]
-\caption{The TOBYQA Algorithm}
-\label{alg:tobyqa}
-\begin{algorithmic}[1]
-\REQUIRE Initial point $\vct{x}_0\in\mathbb{R}^n$, initial radius $\Delta_0>0$, noise variance $R_{\mathrm{obs}}$, parameters $\gamma_1,\gamma_2>1$, $\eta\in(0,1)$, tolerances $\kappa_{\mathrm{tol}},\kappa_{\mathrm{geom}}>0$.
-\ENSURE Approximate stationary point $\vct{x}^*$.
-\STATE Evaluate initial stencil $\{\vct{x}_0\}\cup\{\vct{x}_0\pm\Delta_0\vct{e}_j\}_{j=1}^n$ at sequential timestamps to form $\mathcal Y_0$; record initial center $(\vct{x}_0, t_0, F_0)$ with $F_0 := F(\vct{x}_0, t_0)$.
-\STATE Set spread $s_F\leftarrow\max_iF_i-\min_iF_i$, curvature scale $\widehat\sigma_H\leftarrow s_F/\Delta_0^2$, ridge parameter $\rho\leftarrow \widehat\sigma_H^2/R_{\mathrm{obs}}$, and initial cubic weight $\sigma_0\leftarrow s_F/\Delta_0^3$.
-\STATE Compute baseline covariance metric $P_{\mathrm{baseline}}$ from the KKT system on $\mathcal Y_0$.
-\FOR{$k = 0, 1, 2, \dots$}
-  \STATE Construct $A$, $\vct{\theta}$, and $X_{\mathrm{aug}}$; solve~\eqref{eq:tobyqa-kkt} for $(\vct{\lambda},c,\vct{g}_k,\gamma_k)$ and compute $P_{\mathrm{norm}}$.
-  \IF{$\|\vct{g}_k\|_2<\kappa_{\mathrm{tol}}\sqrt{\mathrm{tr}(R_{\mathrm{obs}}[P_{\mathrm{norm}}]_{gg})}$ \textbf{and} $\mathrm{tr}(P_{\mathrm{norm}})\le\kappa_{\mathrm{geom}}\,\mathrm{tr}(P_{\mathrm{baseline}})$}
-    \STATE \textbf{return} $\vct{x}_k$.
-  \ENDIF
-  \STATE Compute trial step $\vct{s}_k\leftarrow-\vct{g}_k/\sqrt{\sigma_k\|\vct{g}_k\|_2}$ and predicted reduction $\mathrm{Pred}_k\leftarrow-\vct{g}_k^\top \vct{s}_k$.
-  \STATE Query channel at candidate point $(\vct{x}_k+\vct{s}_k,t_{\mathrm{new}})$ to obtain $F_{\mathrm{new}}$.
-  \STATE Compute drift-compensated actual reduction $\mathrm{Ared}_k\leftarrow (F_k-F_{\mathrm{new}})+\gamma_k(t_{\mathrm{new}}-t_k)$ and ratio $r_k\leftarrow\mathrm{Ared}_k/\mathrm{Pred}_k$.
-  \IF{$\mathrm{Ared}_k \ge -\frac{\kappa_{\mathrm{tol}}}{2}\sqrt{2 R_{\mathrm{obs}}}$}
-    \STATE Set $(\vct{x}_{k+1}, t_{k+1}, F_{k+1}) \leftarrow (\vct{x}_k+\vct{s}_k, t_{\mathrm{new}}, F_{\mathrm{new}})$.
-    \IF{$r_k > \eta$}
-      \STATE $\sigma_{k+1}\leftarrow\sigma_k/\gamma_1$.
-    \ELSE
-      \STATE $\sigma_{k+1}\leftarrow\sigma_k$.
-    \ENDIF
-  \ELSE
-    \STATE Set $(\vct{x}_{k+1}, t_{k+1}, F_{k+1}) \leftarrow (\vct{x}_k, t_k, F_k)$.
-    \STATE $\sigma_{k+1}\leftarrow\gamma_2\sigma_k$.
-  \ENDIF
-  \STATE Remove from $\mathcal Y_k$ the oldest sample not located at $\vct{x}_{k+1}$.
-  \STATE Insert $(\vct{x}_k+\vct{s}_k,t_{\mathrm{new}},F_{\mathrm{new}})$ to form $\mathcal Y_{k+1}$.
-\ENDFOR
-\end{algorithmic}
-\end{algorithm}
+\begin{theorem}
+\label{thm:nonlinear-drift}
+Suppose the observation channel has the form $F(\vct{x},t) = f(\vct{x}) + \mu(t) + \varepsilon(\vct{x},t)$, where $\mu \in C^2(\mathbb{R})$ with $|\mu''(t)| \le L_\mu$ for all $t$. Let $\tau_{\max} := \max_{i} |t_i - t_k|$ denote the temporal span of the active set $\mathcal{Y}_k$. Then:
+\begin{equation}\label{eq:nonlinear-bounds}
+  \bigl|\gamma - \gamma^{\mathrm{stat}} - \mu'(t_k)\bigr| \;\le\; C_\gamma\,L_\mu\,\tau_{\max},
+  \qquad
+  \bigl\|\vct{g} - \vct{g}^{\mathrm{stat}}\bigr\|_2 \;\le\; C_g\,L_\mu\,\tau_{\max}^2,
+\end{equation}
+where $C_\gamma, C_g > 0$ depend on the normalized active set configuration and $\rho$, but are independent of $\tau_{\max}$ and $L_\mu$.
+\end{theorem}
+
+\begin{proof}
+Taylor expanding $\mu(t_i)$ around $t_k$ gives $\mu(t_i) = \mu(t_k) + \mu'(t_k)\theta_i + r_\mu(t_i)$, where $|r_\mu(t_i)| \le \tfrac{1}{2} L_\mu \theta_i^2 \le \tfrac{1}{2} L_\mu \tau_{\max}^2$. In vector form,
+\[
+  \vct{\mu} \;=\; X_{\mathrm{aug}}\bigl[\mu(t_k)\, \vct{e}_1 + \mu'(t_k)\, \vct{e}_{n+2}\bigr] + \vct{r}_\mu.
+\]
+By~\eqref{eq:left-inverse}, $\Pi$ annihilates the first term, so the perturbation from $\vct{\mu}$ is governed solely by $\vct{r}_\mu$:
+\[
+  \begin{bmatrix}c - c^{\mathrm{stat}} - \mu(t_k)\\\vct{g} - \vct{g}^{\mathrm{stat}}\\\gamma - \gamma^{\mathrm{stat}} - \mu'(t_k)\end{bmatrix}
+  \;=\; \Pi\,\vct{r}_\mu.
+\]
+Writing $\tau := \tau_{\max}$ and factoring the temporal column as $\vct{\theta} = \tau\,\vct{\hat\theta}$ with $\|\vct{\hat\theta}\|_\infty \le 1$, we set $T := [\mathbf{1}_m \;\; D \;\; \vct{\hat\theta}]$ and $J := \operatorname{diag}(I_{n+1}, \tau)$, so that $X_{\mathrm{aug}} = TJ$. Then $S = J\,\hat S\,J$ with $\hat S := T^\top K^{-1} T$. Because $K$ depends only on the spatial displacements and $\rho$, both $K$ and $\hat S$ are independent of $\tau$, and
+\[
+  \Pi\, \vct{r}_\mu \;=\; J^{-1} \hat S^{-1} T^\top K^{-1} \vct{r}_\mu,
+\]
+where $J^{-1} = \operatorname{diag}(I_{n+1}, \tau^{-1})$. The $(c,\vct{g})$-components carry the factor $1$, while the $\gamma$-component carries $\tau^{-1}$. Combining this with $\|\vct{r}_\mu\|_2 \le \tfrac{\sqrt{m}}{2} L_\mu \tau^2$ yields~\eqref{eq:nonlinear-bounds} with $C_\gamma = C_g = \tfrac{\sqrt{m}}{2}\,\|\hat S^{-1} T^\top K^{-1}\|_2$.
+\end{proof}
+
+\begin{remark}
+\label{rem:fifo-bound}
+Theorem~\ref{thm:nonlinear-drift} shows that the temporal span $\tau_{\max}$ directly controls the gradient error from nonlinear drift. The sample replacement rule in Section~\ref{sec:sample-management} removes the oldest non-center sample at each iteration to keep $\tau_{\max}$ bounded.
+\end{remark}
+
+\subsection{Residual Covariance Model}
+\label{sec:statistical-foundation}
+
+In the optimization algorithm of Section~\ref{sec:algorithm}, TOBYQA uses only the first-order parameters $(c, \vct{g}, \gamma)$ from~\eqref{eq:primal-sol} to generate trial steps, setting the explicit model Hessian in the step subproblem to zero ($H_k \equiv 0$) because estimating $n(n+1)/2$ curvature entries from $m = 2n+1$ noisy, drifting evaluations amplifies errors of order $O(\sigma_\varepsilon / \delta_k^2)$. A natural question is why we retain the fourth-order kernel $A_{ij} = \tfrac{1}{2}(\vct{d}_i^\top \vct{d}_j)^2$ inside $K = A + \rho^{-1} I_m$ when estimating $(c, \vct{g}, \gamma)$, and how the regularization weight $\rho$ should be calibrated to the observation noise variance $\sigma_\varepsilon^2$.
+
+To answer both questions, consider a twice continuously differentiable objective $f$ and its Taylor expansion around $\vct{x}_k$:
+\begin{equation}\label{eq:residual-decomp}
+  f(\vct{x}_k + \vct{d}_i) \;=\; f(\vct{x}_k) + \nabla f(\vct{x}_k)^\top \vct{d}_i + \tfrac{1}{2} \vct{d}_i^\top H \vct{d}_i + r_3(\vct{d}_i),
+\end{equation}
+where $H := \nabla^2 f(\vct{x}_k)$ and $|r_3(\vct{d}_i)| = O(\|\vct{d}_i\|_2^3)$. When the observations $F_i = f(\vct{x}_i) + \mu(t_i) + \varepsilon_i$ are fitted by the linear terms $c + \vct{g}^\top \vct{d}_i + \gamma \theta_i$, the unmodeled spatial residual at sample $i$ is dominated by the quadratic form $q_i := \tfrac{1}{2}\vct{d}_i^\top H \vct{d}_i$. Unlike the independent observation noise $\varepsilon_i$, the curvature residuals $q_i$ and $q_j$ at two displacements $\vct{d}_i$ and $\vct{d}_j$ are spatially correlated through the shared Hessian $H$. The following result shows that under an isotropic prior on $H$, their covariance matrix is proportional to $A$.
+
+\begin{proposition}
+\label{prop:kernel-stat}
+Let $H \in \mathbb{R}^{n\times n}$ be a random symmetric matrix drawn from a rotation-invariant ensemble with $\mathbb{E}[H] = 0$ and
+\begin{equation}\label{eq:goe-prior}
+  \mathbb{E}[H_{ab} H_{cd}] \;=\; \sigma_H^2\,(\delta_{ac}\delta_{bd} + \delta_{ad}\delta_{bc}),
+\end{equation}
+where $\sigma_H^2 > 0$ represents the curvature variance scale. Then for any displacement vectors $\vct{d}_i, \vct{d}_j \in \mathbb{R}^n$, the covariance between $q_i := \tfrac{1}{2} \vct{d}_i^\top H \vct{d}_i$ and $q_j := \tfrac{1}{2} \vct{d}_j^\top H \vct{d}_j$ is
+\begin{equation}\label{eq:cov-kernel}
+  \operatorname{Cov}(q_i, q_j) \;=\; \tfrac{\sigma_H^2}{2}\,(\vct{d}_i^\top \vct{d}_j)^2 \;=\; \sigma_H^2 A_{ij}.
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+Writing $q_i = \tfrac{1}{2}\sum_{a,b=1}^n H_{ab} d_{i,a} d_{i,b}$, we have $\mathbb{E}[q_i] = 0$, and
+\begin{align*}
+  \operatorname{Cov}(q_i, q_j)
+  &\;=\; \mathbb{E}[q_i q_j]
+  \;=\; \tfrac{1}{4} \sum_{a,b,c,d=1}^n \mathbb{E}[H_{ab} H_{cd}]\,d_{i,a} d_{i,b} d_{j,c} d_{j,d} \\
+  &\;=\; \tfrac{\sigma_H^2}{4} \sum_{a,b,c,d=1}^n (\delta_{ac}\delta_{bd} + \delta_{ad}\delta_{bc})\,d_{i,a} d_{i,b} d_{j,c} d_{j,d} \\
+  &\;=\; \tfrac{\sigma_H^2}{4} \Bigl((\vct{d}_i^\top \vct{d}_j)^2 + (\vct{d}_i^\top \vct{d}_j)^2\Bigr)
+  \;=\; \tfrac{\sigma_H^2}{2} (\vct{d}_i^\top \vct{d}_j)^2
+  \;=\; \sigma_H^2 A_{ij}.
+\end{align*}
+\end{proof}
+
+By Proposition~\ref{prop:kernel-stat}, the sum of the curvature residual $\vct{q} = (q_1, \dots, q_m)^\top$ and the independent observation noise $\vct{\varepsilon} = (\varepsilon_1, \dots, \varepsilon_m)^\top$ has composite covariance
+\[
+  \Sigma_{\mathrm{res}} \;=\; \sigma_H^2 A + \sigma_\varepsilon^2 I_m \;=\; \sigma_H^2 \Bigl(A + \frac{\sigma_\varepsilon^2}{\sigma_H^2} I_m\Bigr) \;=\; \sigma_H^2 \bigl(A + \rho^{-1} I_m\bigr) \;=\; \sigma_H^2 K,
+\]
+when the regularization weight is set to the curvature-to-noise ratio
+\begin{equation}\label{eq:snr-rho}
+  \rho \;=\; \frac{\sigma_H^2}{\sigma_\varepsilon^2}.
+\end{equation}
+Under this covariance model, the generalized least-squares estimator of the linear parameters $[c, \vct{g}^\top, \gamma]^\top$ is
+\[
+  \bigl(X_{\mathrm{aug}}^\top \Sigma_{\mathrm{res}}^{-1} X_{\mathrm{aug}}\bigr)^{-1} X_{\mathrm{aug}}^\top \Sigma_{\mathrm{res}}^{-1} \vct{F}
+  \;=\; \bigl(X_{\mathrm{aug}}^\top K^{-1} X_{\mathrm{aug}}\bigr)^{-1} X_{\mathrm{aug}}^\top K^{-1} \vct{F}
+  \;=\; \Pi \vct{F},
+\]
+which coincides with the primal KKT solution~\eqref{eq:primal-sol}. Retaining the kernel $A$ in $K = A + \rho^{-1}I_m$ therefore accounts for the spatial covariance of unmodeled quadratic curvature when estimating $(c, \vct{g}, \gamma)$, while relation~\eqref{eq:snr-rho} provides the calibration rule for $\rho$ used in Section~\ref{sec:algorithm}.
+
 
