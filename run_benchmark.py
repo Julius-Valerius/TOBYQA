@@ -472,7 +472,7 @@ def do_analyze(args):
     if args.latex_out:
         os.makedirs(args.latex_out, exist_ok=True)
         dims = sorted({r['dim'] for r in runs})
-        main_solvers = [s for s in ['ours', 'newuoa', 'bobyqa', 'pybobyqa',
+        main_solvers = [s for s in ['ours', 'newuoa', 'pybobyqa',
                                     'dfols', 'neldermead', 'bfgs-fd'] if s in present]
         if 'pybobyqa' in main_solvers and 'dfols' in main_solvers:
             main_solvers.remove('dfols')

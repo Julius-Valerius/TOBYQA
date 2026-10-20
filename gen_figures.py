@@ -23,7 +23,7 @@ DISPLAY = {
     'neldermead': ('Nelder-Mead',   '#C5951D', (0, (3, 1, 1, 1))),
     'bfgs-fd':    ('BFGS',          '#5C4033', (0, (5, 2))),
 }
-ORDER = ['ours', 'newuoa', 'bobyqa', 'pybobyqa', 'dfols', 'neldermead', 'bfgs-fd']
+ORDER = ['ours', 'newuoa', 'pybobyqa', 'dfols', 'neldermead', 'bfgs-fd']
 
 
 def main():
