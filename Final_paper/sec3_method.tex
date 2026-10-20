@@ -9,9 +9,9 @@
 Given an initial point $\vct{x}_0 \in \mathbb{R}^n$, an initial stencil radius $\Delta_0 > 0$, and the observation noise variance $R_{\mathrm{obs}} := \sigma_\varepsilon^2$, TOBYQA forms the initial active set $\mathcal{Y}_0$ by evaluating the coordinate stencil $\{\vct{x}_0\} \cup \{\vct{x}_0 \pm \Delta_0 \vct{e}_j\}_{j=1}^n$ at sequential timestamps. By Corollary~\ref{cor:axis-rank}, $\mathcal{Y}_0$ satisfies the rank condition $\operatorname{rank}(X_{\mathrm{aug}}) = n+2$. From the initial function spread $s_F := \max_i F_i - \min_i F_i$ across the stencil, the algorithm matches second- and third-order variations over the radius $\Delta_0$ to set the empirical curvature scale $\widehat\sigma_H := s_F / \Delta_0^2$ and the initial cubic regularization weight $\sigma_0 := s_F / \Delta_0^3$, and calibrates the KKT ridge parameter $\rho := \widehat\sigma_H^2 / R_{\mathrm{obs}}$ via~\eqref{eq:snr-rho}.
 
 At iteration $k$, solving the augmented KKT system~\eqref{eq:tobyqa-kkt} on $\mathcal{Y}_k$ yields the spatial gradient $\vct{g}_k$ and drift rate $\gamma_k$. Following Section~\ref{sec:statistical-foundation}, we set the explicit model Hessian to zero ($H_k \equiv 0$). With $H_k \equiv 0$, a linear trust-region subproblem would always step to the trust-region boundary regardless of $\|\vct{g}_k\|_2$; we instead compute the trial step $\vct{s}_k$ by minimizing the cubic regularization subproblem~\cite{CartisGouldToint2011ARC}:
-\begin{equation}\label{eq:arc-subproblem}
+\begin{equation*}
   \min_{\vct{s} \in \mathbb{R}^n} m_k(\vct{s}) \;:=\; \vct{g}_k^\top \vct{s} + \tfrac{\sigma_k}{3} \|\vct{s}\|_2^3,
-\end{equation}
+\end{equation*}
 where $\sigma_k > 0$ governs the step length. The optimality condition $\nabla m_k(\vct{s}) = \vct{g}_k + \sigma_k \|\vct{s}\|_2 \vct{s} = \vct{0}$ gives the unique closed-form minimizer
 \begin{equation}\label{eq:closed-form-step}
   \vct{s}_k \;=\; -\frac{\vct{g}_k}{\sqrt{\sigma_k \|\vct{g}_k\|_2}},
@@ -59,20 +59,20 @@ By Proposition~\ref{prop:ared-decomp}, the stochastic perturbation in $\mathrm{A
   \mathrm{Ared}_k \;\ge\; -\frac{\kappa_{\mathrm{tol}}}{2} \sqrt{2 R_{\mathrm{obs}}},
 \end{equation}
 where $\kappa_{\mathrm{tol}} > 0$ is a stationarity tolerance. When~\eqref{eq:noise-gate} holds, the center moves to $(\vct{x}_{k+1}, t_{k+1}, F_{k+1}) = (\vct{x}_k + \vct{s}_k, t_{\mathrm{new}}, F_{\mathrm{new}})$, and $\sigma_k$ is updated via the ratio
-\begin{equation}\label{eq:ratio-def}
+\begin{equation*}
   r_k \;:=\; \frac{\mathrm{Ared}_k}{\mathrm{Pred}_k},
-\end{equation}
+\end{equation*}
 setting $\sigma_{k+1} = \sigma_k / \gamma_1$ if $r_k > \eta$ and $\sigma_{k+1} = \sigma_k$ otherwise. If~\eqref{eq:noise-gate} fails, the step is rejected, the center remains at $(\vct{x}_{k+1}, t_{k+1}, F_{k+1}) = (\vct{x}_k, t_k, F_k)$, and $\sigma_{k+1} = \gamma_2 \sigma_k$.
 
 Whether the trial step is accepted or rejected, the new sample $(\vct{x}_k + \vct{s}_k, t_{\mathrm{new}}, F_{\mathrm{new}})$ enters the active set to form $\mathcal{Y}_{k+1}$. Maintaining the fixed size $m = 2n+1$ requires removing one existing point. Classical interpolation methods select the outgoing point based on spatial geometry or distance from the center, which allows chronologically old samples to persist across many iterations. Under nonlinear drift, however, Theorem~\ref{thm:nonlinear-drift} shows that the gradient bias scales as $O(L_\mu \tau_{\max}^2)$ with the temporal span $\tau_{\max} = \max_i |t_i - t_k|$. To keep $\tau_{\max}$ bounded, TOBYQA uses a time-priority (FIFO) replacement rule: the center $\vct{x}_{k+1}$ is retained, and the chronologically oldest of the remaining $2n$ samples is discarded. Because one non-center point is replaced at every iteration, the age of all non-center points remains bounded by $2n$ evaluation steps.
 
 Finally, after solving the KKT system at each iteration and before computing the trial step, the algorithm checks whether the recovered gradient is statistically distinguishable from observation noise. By Proposition~\ref{prop:solvability}, under independent observation noise of variance $R_{\mathrm{obs}}$, the primal estimator $[c, \vct{g}_k^\top, \gamma_k]^\top = \Pi \vct{F}$ with $\Pi = S^{-1} X_{\mathrm{aug}}^\top K^{-1}$ has covariance
-\begin{equation}\label{eq:pnorm-def}
+\begin{equation*}
   \mathrm{Cov}\bigl(\Pi \vct{F}\bigr)
   \;=\; \Pi\,(R_{\mathrm{obs}} I_m)\,\Pi^\top
   \;=\; R_{\mathrm{obs}}\, S^{-1} \bigl(X_{\mathrm{aug}}^\top K^{-2} X_{\mathrm{aug}}\bigr) S^{-1}
   \;=:\; R_{\mathrm{obs}}\, P_{\mathrm{norm}}.
-\end{equation}
+\end{equation*}
 The trace of the gradient subblock, $\mathrm{tr}\bigl(R_{\mathrm{obs}} [P_{\mathrm{norm}}]_{gg}\bigr)$, gives the expected squared norm of the noise-induced gradient error. The algorithm terminates when the recovered gradient norm falls below this noise floor:
 \begin{equation}\label{eq:stopping-rule}
   \|\vct{g}_k\|_2 \;<\; \kappa_{\mathrm{tol}} \sqrt{\mathrm{tr}\bigl(R_{\mathrm{obs}} [P_{\mathrm{norm}}]_{gg}\bigr)}.
@@ -80,7 +80,7 @@ The trace of the gradient subblock, $\mathrm{tr}\bigl(R_{\mathrm{obs}} [P_{\math
 To prevent an ill-conditioned sample geometry from inflating $\mathrm{tr}(P_{\mathrm{norm}})$ and triggering premature termination, condition~\eqref{eq:stopping-rule} is enforced only when $\mathrm{tr}(P_{\mathrm{norm}}) \le \kappa_{\mathrm{geom}} \, \mathrm{tr}(P_{\mathrm{baseline}})$, where $P_{\mathrm{baseline}}$ is the value of $P_{\mathrm{norm}}$ on the initial stencil $\mathcal{Y}_0$. The complete procedure is summarized in Algorithm~\ref{alg:tobyqa}, with default parameters $\Delta_0=2$, $\gamma_1=2$, $\gamma_2=1.2$, $\eta=0.75$, $\kappa_{\mathrm{tol}}=3$, and $\kappa_{\mathrm{geom}}=5$.
 
 \begin{algorithm}[t]
-\caption{The TOBYQA Algorithm}
+\caption{TOBYQA}
 \label{alg:tobyqa}
 \begin{algorithmic}[1]
 \REQUIRE Initial point $\vct{x}_0\in\mathbb{R}^n$, initial radius $\Delta_0>0$, noise variance $R_{\mathrm{obs}}$, parameters $\gamma_1,\gamma_2>1$, $\eta\in(0,1)$, tolerances $\kappa_{\mathrm{tol}},\kappa_{\mathrm{geom}}>0$.

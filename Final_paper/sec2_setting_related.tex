@@ -14,9 +14,9 @@ We build on the underdetermined interpolation framework introduced by Powell in 
 This construction presupposes a stationary, noiseless objective. Under the dynamic observation channel~\eqref{eq:oracle_intro}, sequential sampling interleaves spatial displacement with temporal evolution, so a static polynomial model projects temporal shifts onto spatial directions and biases the gradient. Moreover, enforcing $Q(\vct{x}_i) = F_i$ exactly propagates observation noise directly into the fitted coefficients.
 
 TOBYQA addresses both issues by augmenting the quadratic model with a linear temporal term and replacing exact interpolation with a regularized least-squares fit. At iteration $k$, let $\vct{x}_k$ be the current center and $t_k$ its evaluation timestamp. Given the active set $\mathcal{Y}_k = \{(\vct{x}_i, t_i, F_i)\}_{i=1}^m$ of $m = 2n+1$ samples, we center the spatial displacements $\vct{d}_i := \vct{x}_i - \vct{x}_k$ and temporal offsets $\theta_i := t_i - t_k$ at $(\vct{x}_k, t_k)$, and consider the time-augmented model
-\begin{equation}\label{eq:Q-model}
+\begin{equation*}
   Q_k(\vct{x},t) \;=\; c + \vct{g}^{\!\top}(\vct{x} - \vct{x}_k) + \tfrac{1}{2}(\vct{x} - \vct{x}_k)^{\!\top}G\,(\vct{x} - \vct{x}_k) + \gamma\,(t - t_k),
-\end{equation}
+\end{equation*}
 where $c = Q_k(\vct{x}_k, t_k) \in \mathbb{R}$, $\vct{g} = \nabla_{\vct{x}} Q_k(\vct{x}_k, t_k) \in \mathbb{R}^n$, and $\gamma = \partial_t Q_k(\vct{x}_k, t_k) \in \mathbb{R}$ represent the local function value, spatial gradient, and instantaneous drift rate at $(\vct{x}_k, t_k)$, and $G = G^\top \in \mathbb{R}^{n\times n}$ is the symmetric model Hessian. To accommodate observation noise, we fit these parameters by solving
 \begin{equation}\label{eq:soft-obj}
   \min_{c,\,\vct{g},\,G=G^\top,\,\gamma}\;
@@ -28,25 +28,25 @@ where $c = Q_k(\vct{x}_k, t_k) \in \mathbb{R}$, $\vct{g} = \nabla_{\vct{x}} Q_k(
 where $\rho>0$ balances curvature regularization against data fitting. Unlike NEWUOA, which penalizes the incremental change $\|\nabla^2 Q - \nabla^2 Q_{\mathrm{prev}}\|_F$ to accumulate second-order information across iterations, problem~\eqref{eq:soft-obj} penalizes $\tfrac{1}{4}\|G\|_F^2$ directly. In a time-varying channel, the previous Hessian $G_{\mathrm{prev}} = \nabla^2 Q_{k-1}$ was fitted around an earlier timestamp $t_{k-1}$ and absorbs unmodeled nonlinear drift from past iterations; penalizing $\|G - G_{\mathrm{prev}}\|_F^2$ would lock these historical drift errors into the KKT right-hand side even after the old samples themselves are discarded from $\mathcal{Y}_k$. Penalizing $\tfrac{1}{4}\|G\|_F^2$ resets the curvature prior at each iteration and prevents cross-iteration drift accumulation (see the ablation study in Section~\ref{sec:ablations}, Table~\ref{tab:ablation}).
 
 Solving~\eqref{eq:soft-obj} directly in the primal variables would require optimizing over the $n(n+1)/2$ independent entries of $G$. To reduce the dimension of the linear system from $O(n^2)$ to $O(n)$, we pass to a dual representation of $G$ by introducing the fitting residuals $\xi_i := F_i - Q_k(\vct{x}_i, t_i)$ and rewriting~\eqref{eq:soft-obj} as the constrained problem
-\begin{equation}\label{eq:soft-constrained}
+\begin{equation*}
   \min_{c,\,\vct{g},\,G=G^\top,\,\gamma,\,\vct{\xi}}\;
   \tfrac{1}{4}\|G\|_F^2 + \tfrac{\rho}{2}\sum_{i=1}^m \xi_i^2
   \quad \text{s.t.} \quad Q_k(\vct{x}_i, t_i) + \xi_i = F_i, \;\; i = 1, \dots, m,
-\end{equation}
+\end{equation*}
 with Lagrangian
-\begin{equation}\label{eq:lagrangian}
+\begin{equation*}
   \mathcal{L}(c, \vct{g}, G, \gamma, \vct{\xi}, \vct{\lambda})
   \;=\;
   \tfrac{1}{4}\|G\|_F^2 + \tfrac{\rho}{2}\sum_{i=1}^m \xi_i^2
   - \sum_{i=1}^m \lambda_i \Bigl(Q_k(\vct{x}_i, t_i) + \xi_i - F_i\Bigr).
-\end{equation}
+\end{equation*}
 Setting the partial derivatives of $\mathcal{L}$ with respect to the primal variables to zero gives the first-order optimality conditions:
 \begin{align}
   \nabla_G \mathcal{L} = 0 &\implies G \;=\; \sum_{i=1}^m \lambda_i\,\vct{d}_i\,\vct{d}_i^{\!\top}, \label{eq:stat-G} \\
   \nabla_c \mathcal{L} = 0 &\implies \sum_{i=1}^m \lambda_i \;=\; 0, \label{eq:stat-c} \\
   \nabla_{\vct{g}} \mathcal{L} = 0 &\implies \sum_{i=1}^m \lambda_i \vct{d}_i \;=\; \vct{0}, \label{eq:stat-g} \\
   \nabla_\gamma \mathcal{L} = 0 &\implies \sum_{i=1}^m \lambda_i \theta_i \;=\; 0, \label{eq:stat-gamma} \\
-  \nabla_{\xi_i} \mathcal{L} = 0 &\implies \xi_i \;=\; \tfrac{1}{\rho}\lambda_i. \label{eq:stat-xi}
+  \nabla_{\xi_i} \mathcal{L} = 0 &\implies \xi_i \;=\; \tfrac{1}{\rho}\lambda_i. \nonumber
 \end{align}
 Identity~\eqref{eq:stat-G} expresses the $n\times n$ matrix $G$ in terms of the $m$ dual multipliers $\vct{\lambda} = (\lambda_1, \dots, \lambda_m)^\top$. Substituting~\eqref{eq:stat-G} and $\xi_i = \lambda_i/\rho$ into $Q_k(\vct{x}_i, t_i) + \xi_i = F_i$ yields
 \begin{equation}\label{eq:row-i}
@@ -66,11 +66,11 @@ Combining~\eqref{eq:row-i} with the orthogonality conditions~\eqref{eq:stat-c}--
   \begin{bmatrix}\vct{F}\\0\\\vct{0}\\0\end{bmatrix},
 \end{equation}
 where $A \in \mathbb{R}^{m\times m}$ has entries $A_{ij} = \tfrac{1}{2}(\vct{d}_i^\top \vct{d}_j)^2$, $D \in \mathbb{R}^{m\times n}$ has rows $\vct{d}_i^\top$, $\vct{\theta} = (\theta_1, \dots, \theta_m)^\top \in \mathbb{R}^m$, and $\vct{F} = (F_1, \dots, F_m)^\top$. We denote the augmented constraint block by
-\begin{equation}\label{eq:Xaug-def}
+\begin{equation*}
   X_{\mathrm{aug}} \;:=\;
   \begin{bmatrix}\mathbf{1}_m & D & \vct{\theta}\end{bmatrix}
   \;\in\;\mathbb{R}^{m\times(n+2)}.
-\end{equation}
+\end{equation*}
 
 \subsection{Solvability of the KKT System}
 \label{sec:well-posedness}
@@ -166,9 +166,9 @@ Because $\mathbf{1}_m$ is the first column of $X_{\mathrm{aug}}$ and $\vct{\thet
 \begin{theorem}
 \label{thm:exact-decoupling}
 Suppose the observation channel exhibits affine drift:
-\begin{equation}\label{eq:affine-channel}
+\begin{equation*}
   F(\vct{x}, t) \;=\; f(\vct{x}) + \beta\,t + \varepsilon(\vct{x},t),
-\end{equation}
+\end{equation*}
 for some unknown drift rate $\beta \in \mathbb{R}$. Let $\vct{F}^{\mathrm{stat}} := \vct{F} - \beta \vct{t} \in \mathbb{R}^m$ denote the static observations that would be obtained in the absence of drift, and let $[c^{\mathrm{stat}}, (\vct{g}^{\mathrm{stat}})^\top, \gamma^{\mathrm{stat}}]^\top := \Pi \vct{F}^{\mathrm{stat}}$ be the model parameters recovered from $\vct{F}^{\mathrm{stat}}$. If $\operatorname{rank}(X_{\mathrm{aug}}) = n+2$, then the parameters recovered by TOBYQA from the drifting observations $\vct{F}$ satisfy:
 \begin{equation}\label{eq:decoupling-identity}
   \vct{g} \;=\; \vct{g}^{\mathrm{stat}},
@@ -181,9 +181,9 @@ for some unknown drift rate $\beta \in \mathbb{R}$. Let $\vct{F}^{\mathrm{stat}}
 
 \begin{proof}
 Let $\vct{t} = (t_1, \dots, t_m)^\top \in \mathbb{R}^m$ be the vector of query timestamps. Because $t_i = t_k + \theta_i$, we can write $\vct{t}$ in terms of the columns of $X_{\mathrm{aug}} = [\mathbf{1}_m \;\; D \;\; \vct{\theta}]$:
-\begin{equation}\label{eq:t-decomp}
+\begin{equation*}
   \vct{t} \;=\; t_k\,\mathbf{1}_m + \vct{\theta} \;=\; X_{\mathrm{aug}}\,(t_k \vct{e}_1 + \vct{e}_{n+2}),
-\end{equation}
+\end{equation*}
 where $\vct{e}_1 = (1, 0, \dots, 0)^\top$ and $\vct{e}_{n+2} = (0, \dots, 0, 1)^\top$ in $\mathbb{R}^{n+2}$.
 Applying $\Pi$ to $\vct{F} = \vct{F}^{\mathrm{stat}} + \beta \vct{t}$ and using~\eqref{eq:left-inverse} yields
 \begin{align*}
@@ -243,21 +243,21 @@ Theorem~\ref{thm:nonlinear-drift} shows that the temporal span $\tau_{\max}$ dir
 In the optimization algorithm of Section~\ref{sec:algorithm}, TOBYQA uses only the first-order parameters $(c, \vct{g}, \gamma)$ from~\eqref{eq:primal-sol} to generate trial steps, setting the explicit model Hessian in the step subproblem to zero ($H_k \equiv 0$) because estimating $n(n+1)/2$ curvature entries from $m = 2n+1$ noisy, drifting evaluations amplifies errors of order $O(\sigma_\varepsilon / \delta_k^2)$. A natural question is why we retain the fourth-order kernel $A_{ij} = \tfrac{1}{2}(\vct{d}_i^\top \vct{d}_j)^2$ inside $K = A + \rho^{-1} I_m$ when estimating $(c, \vct{g}, \gamma)$, and how the regularization weight $\rho$ should be calibrated to the observation noise variance $\sigma_\varepsilon^2$.
 
 To answer both questions, consider a twice continuously differentiable objective $f$ and its Taylor expansion around $\vct{x}_k$:
-\begin{equation}\label{eq:residual-decomp}
+\begin{equation*}
   f(\vct{x}_k + \vct{d}_i) \;=\; f(\vct{x}_k) + \nabla f(\vct{x}_k)^\top \vct{d}_i + \tfrac{1}{2} \vct{d}_i^\top H \vct{d}_i + r_3(\vct{d}_i),
-\end{equation}
+\end{equation*}
 where $H := \nabla^2 f(\vct{x}_k)$ and $|r_3(\vct{d}_i)| = O(\|\vct{d}_i\|_2^3)$. When the observations $F_i = f(\vct{x}_i) + \mu(t_i) + \varepsilon_i$ are fitted by the linear terms $c + \vct{g}^\top \vct{d}_i + \gamma \theta_i$, the unmodeled spatial residual at sample $i$ is dominated by the quadratic form $q_i := \tfrac{1}{2}\vct{d}_i^\top H \vct{d}_i$. Unlike the independent observation noise $\varepsilon_i$, the curvature residuals $q_i$ and $q_j$ at two displacements $\vct{d}_i$ and $\vct{d}_j$ are spatially correlated through the shared Hessian $H$. The following result shows that under an isotropic prior on $H$, their covariance matrix is proportional to $A$.
 
 \begin{proposition}
 \label{prop:kernel-stat}
 Let $H \in \mathbb{R}^{n\times n}$ be a random symmetric matrix drawn from a rotation-invariant ensemble with $\mathbb{E}[H] = 0$ and
-\begin{equation}\label{eq:goe-prior}
+\begin{equation*}
   \mathbb{E}[H_{ab} H_{cd}] \;=\; \sigma_H^2\,(\delta_{ac}\delta_{bd} + \delta_{ad}\delta_{bc}),
-\end{equation}
+\end{equation*}
 where $\sigma_H^2 > 0$ represents the curvature variance scale. Then for any displacement vectors $\vct{d}_i, \vct{d}_j \in \mathbb{R}^n$, the covariance between $q_i := \tfrac{1}{2} \vct{d}_i^\top H \vct{d}_i$ and $q_j := \tfrac{1}{2} \vct{d}_j^\top H \vct{d}_j$ is
-\begin{equation}\label{eq:cov-kernel}
+\begin{equation*}
   \operatorname{Cov}(q_i, q_j) \;=\; \tfrac{\sigma_H^2}{2}\,(\vct{d}_i^\top \vct{d}_j)^2 \;=\; \sigma_H^2 A_{ij}.
-\end{equation}
+\end{equation*}
 \end{proposition}
 
 \begin{proof}

@@ -10,9 +10,9 @@ We now establish the evaluation complexity of Algorithm~\ref{alg:tobyqa} within 
 \begin{assumption}
 \label{ass:smoothness}
 The objective function $f: \mathbb{R}^n \to \mathbb{R}$ is continuously differentiable with $L_g$-Lipschitz continuous gradient:
-\begin{equation}\label{eq:grad-lipschitz}
+\begin{equation*}
   \|\nabla f(\vct{x}) - \nabla f(\vct{y})\|_2 \;\le\; L_g\,\|\vct{x} - \vct{y}\|_2, \qquad \forall\, \vct{x}, \vct{y} \in \mathbb{R}^n,
-\end{equation}
+\end{equation*}
 and is bounded from below by $f_{\mathrm{low}} > -\infty$ on $\mathbb{R}^n$.
 \end{assumption}
 
@@ -82,14 +82,14 @@ Using $\vct{g}_k^\top \vct{s}_k = -\mathrm{Pred}_k$ from~\eqref{eq:pred-def} and
   f(\vct{x}_k) - f(\vct{x}_k + \vct{s}_k) \;\ge\; \mathrm{Pred}_k \;-\; \tfrac{L_g}{2}\|\vct{s}_k\|_2^2 \;-\; \|\vct{g}_k - \nabla f(\vct{x}_k)\|_2\,\|\vct{s}_k\|_2.
 \end{equation}
 By~\eqref{eq:closed-form-step}--\eqref{eq:pred-def} and condition~\eqref{eq:sigma-threshold}, the ratio of the quadratic curvature term to $\mathrm{Pred}_k$ satisfies
-\begin{equation}\label{eq:curvature-ratio}
+\begin{equation*}
   \frac{\tfrac{L_g}{2}\|\vct{s}_k\|_2^2}{\mathrm{Pred}_k}
   \;=\;
   \frac{\tfrac{L_g}{2}\bigl(\|\vct{g}_k\|_2 / \sigma_k\bigr)}{\|\vct{g}_k\|_2^{3/2} \sigma_k^{-1/2}}
   \;=\;
   \frac{L_g}{2\sqrt{\sigma_k \|\vct{g}_k\|_2}}
   \;\le\; \tfrac{1}{4},
-\end{equation}
+\end{equation*}
 so $\tfrac{L_g}{2}\|\vct{s}_k\|_2^2 \le \tfrac{1}{4}\,\mathrm{Pred}_k$. Substituting this bound into~\eqref{eq:descent-intermediate} gives~\eqref{eq:true-decrease-bound}.
 \end{proof}
 
@@ -104,12 +104,12 @@ Let Assumption~\ref{ass:smoothness} hold, let the residual drift bound~\eqref{eq
   \|\vct{g}_k - \nabla f(\vct{x}_k)\|_2\,\|\vct{s}_k\|_2 \;\le\; \tfrac{1}{4}\,\mathrm{Pred}_k.
 \end{equation}
 Then the conditional rejection probability obeys
-\begin{equation}\label{eq:reject-prob}
+\begin{equation*}
   \mathbb{P}_k\bigl(\text{iteration } k \text{ is rejected}\bigr)
   \;\le\;
   e^{-\kappa_{\mathrm{tol}}^2/8}
   \;=:\; p',
-\end{equation}
+\end{equation*}
 and $p' \le \tfrac{1}{2}$ whenever $\kappa_{\mathrm{tol}} \ge \sqrt{8\ln 2}$.
 \end{lemma}
 
@@ -177,9 +177,9 @@ Let Assumptions~\ref{ass:smoothness}--\ref{ass:sigma-confinement} hold. Let $\va
   \varepsilon \;\ge\; \varepsilon_{\mathrm{noise}} \;:=\; C_0\,\kappa_{eg}\,\max\Bigl\{\delta_{\mathrm{hi}},\; \frac{\sigma_\varepsilon}{\delta_{\mathrm{lo}}}\Bigr\},
 \end{equation}
 where $C_0 > 0$ is an absolute constant. Then the number of iterations $K_\varepsilon$ (and thus of post-initialization function evaluations) required to reach $\|\nabla f(\vct{x}_k)\|_2 \le \varepsilon$ satisfies
-\begin{equation}\label{eq:complexity-rate}
+\begin{equation*}
   K_\varepsilon \;=\; O\Biggl(\frac{L_g\,\bigl(f(\vct{x}_0) - f_{\mathrm{low}}\bigr)}{\varepsilon^2}\Biggr).
-\end{equation}
+\end{equation*}
 \end{theorem}
 
 \begin{proof}
@@ -223,10 +223,10 @@ On rejected iterations $k \in \mathcal{U}_K$, the center is unchanged ($\vct{x}_
   \;\ge\; |\mathcal{S}_K|\,c\,\frac{\varepsilon^2}{L_g},
 \]
 and therefore
-\begin{equation}\label{eq:accepted-bound}
+\begin{equation*}
   |\mathcal{S}_K| \;\le\; \frac{1}{c}\,\frac{L_g\,\bigl(f(\vct{x}_0) - f_{\mathrm{low}}\bigr)}{\varepsilon^2}
   \;=\; O\Biggl(\frac{L_g\,\bigl(f(\vct{x}_0) - f_{\mathrm{low}}\bigr)}{\varepsilon^2}\Biggr).
-\end{equation}
+\end{equation*}
 By Proposition~\ref{prop:rejected-bound} and $\sigma_{\max}/\sigma_0 = \gamma_2 (8L_g^2)/(\sigma_0\varepsilon) = O(\varepsilon^{-1})$, the number of rejected iterations satisfies
 \[
   |\mathcal{U}_K| \;\le\; \frac{\log \gamma_1}{\log \gamma_2}\,|\mathcal{S}_K| \;+\; O(\log(\varepsilon^{-1})).
