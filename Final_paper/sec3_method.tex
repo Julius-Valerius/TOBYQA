@@ -1,10 +1,5 @@
 \section{The TOBYQA Algorithm}
 \label{sec:algorithm}
-\label{sec:arc-decision}
-\label{sec:acceptance-update}
-\label{sec:ared-decomposition}
-\label{sec:sample-management}
-\label{sec:algo-complete}
 
 Given an initial point $\vct{x}_0 \in \mathbb{R}^n$, an initial stencil radius $\Delta_0 > 0$, and the observation noise variance $R_{\mathrm{obs}} := \sigma_\varepsilon^2$, TOBYQA forms the initial active set $\mathcal{Y}_0$ by evaluating the coordinate stencil $\{\vct{x}_0\} \cup \{\vct{x}_0 \pm \Delta_0 \vct{e}_j\}_{j=1}^n$ at sequential timestamps. By Corollary~\ref{cor:axis-rank}, $\mathcal{Y}_0$ satisfies the rank condition $\operatorname{rank}(X_{\mathrm{aug}}) = n+2$. From the initial function spread $s_F := \max_i F_i - \min_i F_i$ across the stencil, the algorithm matches second- and third-order variations over the radius $\Delta_0$ to set the empirical curvature scale $\widehat\sigma_H := s_F / \Delta_0^2$ and the initial cubic regularization weight $\sigma_0 := s_F / \Delta_0^3$, and calibrates the KKT ridge parameter $\rho := \widehat\sigma_H^2 / R_{\mathrm{obs}}$ via~\eqref{eq:snr-rho}.
 

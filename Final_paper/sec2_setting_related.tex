@@ -1,8 +1,6 @@
 \section{Time-Augmented Interpolation Model}
-\label{sec:properties}
 \label{sec:augmented-model}
 
-\phantomsection
 \subsection{Soft-Constrained Quadratic Model}
 \label{sec:kkt-derivation}
 
@@ -234,7 +232,7 @@ where $J^{-1} = \operatorname{diag}(I_{n+1}, \tau^{-1})$. The $(c,\vct{g})$-comp
 
 \begin{remark}
 \label{rem:fifo-bound}
-Theorem~\ref{thm:nonlinear-drift} shows that the temporal span $\tau_{\max}$ directly controls the gradient error from nonlinear drift. The sample replacement rule in Section~\ref{sec:sample-management} removes the oldest non-center sample at each iteration to keep $\tau_{\max}$ bounded.
+Theorem~\ref{thm:nonlinear-drift} shows that the temporal span $\tau_{\max}$ directly controls the gradient error from nonlinear drift. The sample replacement rule in Section~\ref{sec:algorithm} removes the oldest non-center sample at each iteration to keep $\tau_{\max}$ bounded.
 \end{remark}
 
 \subsection{Residual Covariance Model}
