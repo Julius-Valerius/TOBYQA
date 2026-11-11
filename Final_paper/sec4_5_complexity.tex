@@ -31,13 +31,12 @@ There exists a constant $\kappa_{eg} > 0$ such that, at every iteration $k \ge 0
 where $\zeta_k := \max\{\delta_k, \sigma_\varepsilon / \delta_k\}$ and $\delta_k$ is the active sample radius in~\eqref{eq:radius-bounds}.
 \end{assumption}
 
-Assumptions~\ref{ass:smoothness}--\ref{ass:fully-linear} are standard in derivative-free complexity analysis~\cite{ConnScheinbergVicente2009,CartisRoberts2019}. Here $\zeta_k$ combines the spatial interpolation error $O(\delta_k)$ and the noise amplification $O(\sigma_\varepsilon / \delta_k)$; under affine drift the temporal trend is removed exactly by Theorem~\ref{thm:exact-decoupling}, whereas under nonlinear drift with bounded temporal span $\tau_{\max} = O(n)$ the residual drift error from Theorem~\ref{thm:nonlinear-drift} is absorbed into~\eqref{eq:grad-error-bound}.
+Assumptions~\ref{ass:smoothness}--\ref{ass:fully-linear} are standard in derivative-free complexity analysis~\cite{ConnScheinbergVicente2009,CartisRoberts2019}. Here $\zeta_k$ combines the spatial interpolation error $O(\delta_k)$ and the noise amplification $O(\sigma_\varepsilon / \delta_k)$; under affine drift the temporal trend is removed exactly by Theorem~\ref{thm:exact-decoupling}, whereas under nonlinear drift on a bounded temporal window the residual drift error from Theorem~\ref{thm:nonlinear-drift} is absorbed into~\eqref{eq:grad-error-bound}.
 
-To analyze step acceptance at iteration $k$, let $\mathbb{E}_k[\cdot]$ and $\mathbb{P}_k(\cdot)$ denote expectation and probability over the observation noise term $\mathcal{E}_{\mathrm{noise}} = \varepsilon(\vct{x}_k, t_k) - \varepsilon(\vct{x}_k + \vct{s}_k, t_{\mathrm{new}})$ conditional on the iterate $\vct{x}_k$ and trial step $\vct{s}_k$. By Proposition~\ref{prop:ared-decomp} and $\mathbb{E}_k[\mathcal{E}_{\mathrm{noise}}] = 0$, the expected drift-compensated reduction differs from the true objective decrease by the acceptance bias
+To analyze step acceptance at iteration $k$, let $\mathcal{F}_k$ denote the history of all function evaluations prior to querying $\vct{x}_k + \vct{s}_k$ at iteration $k$, and write $\mathbb{E}_k[\cdot] := \mathbb{E}[\,\cdot \mid \mathcal{F}_k]$ and $\mathbb{P}_k(\cdot) := \mathbb{P}(\,\cdot \mid \mathcal{F}_k)$. Conditional on $\mathcal{F}_k$, the expected drift-compensated reduction~\eqref{eq:ared-three-terms} differs from the true objective decrease by the acceptance bias
 \begin{equation}\label{eq:ared-expectation}
   b_k \;:=\; \mathbb{E}_k[\mathrm{Ared}_k]
-  - \bigl(f(\vct{x}_k)-f(\vct{x}_k+\vct{s}_k)\bigr)
-  \;=\; \mathbb{E}_k[\mathcal{E}_{\mathrm{drift}}].
+  - \bigl(f(\vct{x}_k)-f(\vct{x}_k+\vct{s}_k)\bigr).
 \end{equation}
 The following assumption bounds this bias and the noise tail in $\mathrm{Ared}_k$.
 
@@ -47,10 +46,10 @@ There exists $\varepsilon > 0$ such that, whenever the current center satisfies 
 \begin{equation}\label{eq:residual-drift-bound}
   |b_k| \;\le\; \tfrac{1}{4}\,\mathrm{Pred}_k,
 \end{equation}
-and the noise perturbation $\mathcal{E}_{\mathrm{noise}} = \mathrm{Ared}_k - \mathbb{E}_k[\mathrm{Ared}_k]$ is conditionally sub-Gaussian with variance proxy $2\sigma_\varepsilon^2$.
+and the fluctuation $\mathrm{Ared}_k - \mathbb{E}_k[\mathrm{Ared}_k]$ is conditionally sub-Gaussian given $\mathcal{F}_k$ with variance proxy $2\sigma_\varepsilon^2$.
 \end{assumption}
 
-Condition~\eqref{eq:residual-drift-bound} requires the temporal compensation error not to dominate the predicted decrease during non-stationary iterations. Under affine drift, relation~\eqref{eq:ared-affine-residual} gives $b_k = \mathbb{E}_k[\gamma_k^{\mathrm{stat}}] (t_{\mathrm{new}} - t_k)$, which reflects any deterministic space--time correlation along the trajectory. Under nonlinear $C^2$ drift, $b_k$ also includes the temporal truncation error bounded by $O(L_\mu \tau_{\max}^2)$ in Theorem~\ref{thm:nonlinear-drift}; because the FIFO replacement rule keeps $\tau_{\max} = O(n)$, condition~\eqref{eq:residual-drift-bound} holds whenever the drift curvature $L_\mu$ and step interval $t_{\mathrm{new}} - t_k$ are moderate relative to $\varepsilon$.
+Condition~\eqref{eq:residual-drift-bound} requires the residual offset in $\mathrm{Ared}_k$ not to dominate the predicted decrease during non-stationary iterations. Under affine drift, relation~\eqref{eq:ared-affine-residual} removes the drift rate $\beta$ identically from $\mathcal{E}_{\mathrm{drift}}$. Under nonlinear $C^2$ drift, $b_k$ also includes the temporal truncation error bounded by $O(L_\mu \tau_{\max}^2)$ in Theorem~\ref{thm:nonlinear-drift}, which remains controlled whenever the drift curvature $L_\mu$ and evaluation intervals are moderate relative to $\varepsilon$.
 
 We first give a sufficient lower bound on the cubic regularization weight $\sigma_k$ for the trial step~\eqref{eq:closed-form-step} to reduce the latent objective $f$.
 
@@ -236,7 +235,7 @@ Since Algorithm~\ref{alg:tobyqa} performs one function evaluation per iteration 
 
 \begin{remark}
 \label{rem:optimality}
-The $O(\varepsilon^{-2})$ rate in Theorem~\ref{thm:main-complexity} matches the optimal complexity of first-order methods on $C^{1,1}$ nonconvex objectives~\cite{CarmonDuchiHinderSidford2020}. With a linear sample budget $m=2n+1$, the active set provides a fully-linear gradient model rather than an accurate Hessian. Achieving the $O(\varepsilon^{-3/2})$ rate of second-order adaptive cubic regularization~\cite{NesterovPolyak2006,CartisGouldToint2011ARC,CartisGouldToint2011ARC2} requires $\|(H_k-\nabla^2f(\vct{x}_k))\vct{s}_k\|_2=O(\|\vct{s}_k\|_2^2)$~\cite[AM.4]{CartisGouldToint2011ARC}, which in the derivative-free setting demands $O(n^2)$ interpolation points. Under temporal drift, maintaining $O(n^2)$ sequential samples stretches the temporal span to $\tau_{\max} = O(n^2)$ and amplifies the nonlinear drift bias of Theorem~\ref{thm:nonlinear-drift} to $O(L_\mu n^4)$. By operating with $m=2n+1$ points and $H_k \equiv 0$, TOBYQA keeps $\tau_{\max} = O(n)$ and achieves the first-order complexity rate.
+The $O(\varepsilon^{-2})$ rate in Theorem~\ref{thm:main-complexity} matches the optimal complexity of first-order methods on $C^{1,1}$ nonconvex objectives~\cite{CarmonDuchiHinderSidford2020}. With a linear sample budget $m=2n+1$, the active set provides a fully-linear gradient model rather than an accurate Hessian. Achieving the $O(\varepsilon^{-3/2})$ rate of second-order adaptive cubic regularization~\cite{NesterovPolyak2006,CartisGouldToint2011ARC,CartisGouldToint2011ARC2} requires $\|(H_k-\nabla^2f(\vct{x}_k))\vct{s}_k\|_2=O(\|\vct{s}_k\|_2^2)$~\cite[AM.4]{CartisGouldToint2011ARC}, which in the derivative-free setting demands $O(n^2)$ interpolation points. Under temporal drift, maintaining $O(n^2)$ sequential samples requires a temporal span of at least $\Omega(n^2)$ evaluations, amplifying the nonlinear drift bias of Theorem~\ref{thm:nonlinear-drift} to at least $O(L_\mu n^4)$. By operating with $m=2n+1$ points and $H_k \equiv 0$, TOBYQA avoids $O(n^2)$ sample accumulation and achieves the first-order complexity rate.
 \end{remark}
 
 

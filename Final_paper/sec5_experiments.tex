@@ -1,7 +1,7 @@
 \section{Numerical Experiments}
 \label{sec:experiments}
 
-We evaluate the empirical performance of TOBYQA on the Mor\'e--Wild benchmark collection~\cite{MoreWild2009} across both stationary and drifting observation channels. The testbed comprises $65$ scalable unconstrained problems evaluated at dimensions $n \in \{6, 10, 20\}$ across $5$ independent noise realizations, for a total of $975$ problem instances per channel. Each problem is evaluated through one of the seven observation channels summarized in Table~\ref{tab:envs}. Channel amplitudes and observation noise standard deviations are scaled by the initial function magnitude $s_0 := \max(|f(\vct{x}_0)|, 1)$, with $\sigma_\varepsilon = 10^{-3} s_0$. The evaluation index advances as $t \leftarrow t + 1$ upon each function evaluation across all solvers.
+We evaluate the empirical performance of TOBYQA on $65$ scalable unconstrained problems from CUTEst~\cite{GouldOrbanToint2015} across both stationary and drifting observation channels. Each problem is evaluated at dimensions $n \in \{6, 10, 20\}$ across $5$ independent noise realizations, for a total of $975$ problem instances per channel, under the seven observation channels summarized in Table~\ref{tab:envs}. Channel amplitudes and observation noise standard deviations are scaled by the initial function magnitude $s_0 := \max(|f(\vct{x}_0)|, 1)$, with $\sigma_\varepsilon = 10^{-3} s_0$. The evaluation index advances as $t \leftarrow t + 1$ upon each function evaluation across all solvers.
 
 \begin{table}[t]
   \centering\small
@@ -9,7 +9,7 @@ We evaluate the empirical performance of TOBYQA on the Mor\'e--Wild benchmark co
   \label{tab:envs}
   \begin{tabular}{lll}
     \toprule
-    Channel & Analytical Form $\phi(f(\vct{x}), t)$ & Classification \\
+    Channel & Channel Form & Classification \\
     \midrule
     Static        & $f(\vct{x})$                                      & Baseline ($\beta = 0$) \\
     LinearDrift   & $f(\vct{x}) + 0.01\,s_0\,t$                       & Affine drift (Theorem~\ref{thm:exact-decoupling}) \\
@@ -22,7 +22,7 @@ We evaluate the empirical performance of TOBYQA on the Mor\'e--Wild benchmark co
   \end{tabular}
 \end{table}
 
-We compare TOBYQA against representative classical and modern derivative-free solvers: Powell's unconstrained interpolation solver NEWUOA~\cite{Powell2006NEWUOA} executed via the PDFO library~\cite{RagonneauZhang2024}, the noise-aware trust-region solver Py-BOBYQA~\cite{CartisRoberts2019}, the Nelder--Mead simplex search method~\cite{NelderMead1965}, and a quasi-Newton BFGS implementation using forward-difference gradient approximations ($h = 10^{-4}$). Every solver is allocated a maximum budget of $1500$ evaluations per instance. Following Mor\'e and Wild~\cite{MoreWild2009}, performance is measured on the noise-free latent objective $f$, and an instance is declared solved at accuracy tolerance $\tau \in \{10^{-1}, 10^{-3}, 10^{-5}, 10^{-7}\}$ if $\min_k f(\vct{x}_k) \le f_L + \tau(f(\vct{x}_0) - f_L)$, where $f_L$ is the smallest function value found across all solvers.
+We compare TOBYQA against representative classical and modern derivative-free solvers: Powell's unconstrained interpolation solver NEWUOA~\cite{Powell2006NEWUOA} executed via the PDFO library~\cite{RagonneauZhang2024}, the noise-aware trust-region solver Py-BOBYQA~\cite{CartisRoberts2019} (with \texttt{objfun\_has\_noise=True}), the Nelder--Mead simplex search method~\cite{NelderMead1965}, and a quasi-Newton BFGS implementation using forward-difference gradient approximations ($h = 10^{-4}$). Every solver is allocated a maximum budget of $1500$ evaluations per instance. Following Mor\'e and Wild~\cite{MoreWild2009}, performance is measured on the noise-free latent objective $f$, and an instance is declared solved at accuracy tolerance $\tau \in \{10^{-1}, 10^{-3}, 10^{-5}, 10^{-7}\}$ if $\min_k f(\vct{x}_k) \le f_L + \tau(f(\vct{x}_0) - f_L)$, where $f_L$ is the smallest value of $f$ found across all tested solvers and variants within the evaluation budget.
 
 \subsection{Benchmark Comparisons}
 \label{sec:bench-comparison}

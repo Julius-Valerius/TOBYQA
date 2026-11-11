@@ -167,7 +167,7 @@ Suppose the observation channel exhibits affine drift:
 \begin{equation*}
   F(\vct{x}, t) \;=\; f(\vct{x}) + \beta\,t + \varepsilon(\vct{x},t),
 \end{equation*}
-for some unknown drift rate $\beta \in \mathbb{R}$. Let $\vct{F}^{\mathrm{stat}} := \vct{F} - \beta \vct{t} \in \mathbb{R}^m$ denote the static observations that would be obtained in the absence of drift, and let $[c^{\mathrm{stat}}, (\vct{g}^{\mathrm{stat}})^\top, \gamma^{\mathrm{stat}}]^\top := \Pi \vct{F}^{\mathrm{stat}}$ be the model parameters recovered from $\vct{F}^{\mathrm{stat}}$. If $\operatorname{rank}(X_{\mathrm{aug}}) = n+2$, then the parameters recovered by TOBYQA from the drifting observations $\vct{F}$ satisfy:
+for some unknown drift rate $\beta \in \mathbb{R}$. Let $\vct{F}^{\mathrm{stat}} := \vct{F} - \beta \vct{t} \in \mathbb{R}^m$ denote the static observations that would be obtained in the absence of drift, and let $[c^{\mathrm{stat}}, (\vct{g}^{\mathrm{stat}})^\top, \gamma^{\mathrm{stat}}]^\top := \Pi \vct{F}^{\mathrm{stat}}$ be the model parameters recovered from $\vct{F}^{\mathrm{stat}}$. For any fixed $\rho > 0$ with $\operatorname{rank}(X_{\mathrm{aug}}) = n+2$, the parameters recovered by TOBYQA from the drifting observations $\vct{F}$ satisfy:
 \begin{equation}\label{eq:decoupling-identity}
   \vct{g} \;=\; \vct{g}^{\mathrm{stat}},
   \qquad
@@ -200,17 +200,17 @@ which gives~\eqref{eq:decoupling-identity}.
 Theorem~\ref{thm:exact-decoupling} is an instance of the Frisch--Waugh--Lovell theorem~\cite{FrischWaugh1933,Lovell1963} in weighted least squares: including the temporal offset $\vct{\theta}$ as an explicit regressor projects out linear temporal trends for any drift rate $\beta$, any noise realization, and any sample radius.
 \end{remark}
 
-When the drift $\mu(t)$ is nonlinear, its Taylor expansion around $t_k$ decomposes into an affine component $\mu(t_k) + \mu'(t_k)(t - t_k)$ plus a second-order remainder. By~\eqref{eq:left-inverse}, the recovery operator $\Pi$ still annihilates the affine component, so the estimation bias in $\vct{g}$ and $\gamma$ is determined solely by the second-order temporal remainder across the active set.
+When the drift $\mu(t)$ is nonlinear, its Taylor expansion around $t_k$ decomposes into an affine component $\mu(t_k) + \mu'(t_k)(t - t_k)$ plus a second-order remainder. By~\eqref{eq:left-inverse}, the recovery operator $\Pi$ maps the affine component entirely into $(c,\gamma)$, so the estimation bias in $\vct{g}$ and $\gamma$ is determined solely by the second-order temporal remainder across the active set.
 
 \begin{theorem}
 \label{thm:nonlinear-drift}
-Suppose the observation channel has the form $F(\vct{x},t) = f(\vct{x}) + \mu(t) + \varepsilon(\vct{x},t)$, where $\mu \in C^2(\mathbb{R})$ with $|\mu''(t)| \le L_\mu$ for all $t$. Let $\tau_{\max} := \max_{i} |t_i - t_k|$ denote the temporal span of the active set $\mathcal{Y}_k$. Then:
+Suppose the observation channel has the form $F(\vct{x},t) = f(\vct{x}) + \mu(t) + \varepsilon(\vct{x},t)$, where $\mu \in C^2(\mathbb{R})$ with $|\mu''(t)| \le L_\mu$ for all $t$. Let $\tau_{\max} := \max_{i} |t_i - t_k|$ denote the temporal span of the active set $\mathcal{Y}_k$. If $\operatorname{rank}(X_{\mathrm{aug}}) = n+2$, then:
 \begin{equation}\label{eq:nonlinear-bounds}
   \bigl|\gamma - \gamma^{\mathrm{stat}} - \mu'(t_k)\bigr| \;\le\; C_\gamma\,L_\mu\,\tau_{\max},
   \qquad
   \bigl\|\vct{g} - \vct{g}^{\mathrm{stat}}\bigr\|_2 \;\le\; C_g\,L_\mu\,\tau_{\max}^2,
 \end{equation}
-where $C_\gamma, C_g > 0$ depend on the normalized active set configuration and $\rho$, but are independent of $\tau_{\max}$ and $L_\mu$.
+where $C_\gamma, C_g > 0$ depend on the spatial displacements $\{\vct{d}_i\}_{i=1}^m$, the normalized temporal offsets, and $\rho$, but are independent of $\tau_{\max}$ and $L_\mu$.
 \end{theorem}
 
 \begin{proof}
@@ -218,7 +218,7 @@ Taylor expanding $\mu(t_i)$ around $t_k$ gives $\mu(t_i) = \mu(t_k) + \mu'(t_k)\
 \[
   \vct{\mu} \;=\; X_{\mathrm{aug}}\bigl[\mu(t_k)\, \vct{e}_1 + \mu'(t_k)\, \vct{e}_{n+2}\bigr] + \vct{r}_\mu.
 \]
-By~\eqref{eq:left-inverse}, $\Pi$ annihilates the first term, so the perturbation from $\vct{\mu}$ is governed solely by $\vct{r}_\mu$:
+By~\eqref{eq:left-inverse}, the perturbation from $\vct{\mu}$ is governed solely by $\vct{r}_\mu$:
 \[
   \begin{bmatrix}c - c^{\mathrm{stat}} - \mu(t_k)\\\vct{g} - \vct{g}^{\mathrm{stat}}\\\gamma - \gamma^{\mathrm{stat}} - \mu'(t_k)\end{bmatrix}
   \;=\; \Pi\,\vct{r}_\mu.
@@ -244,7 +244,7 @@ To answer both questions, consider a twice continuously differentiable objective
 \begin{equation*}
   f(\vct{x}_k + \vct{d}_i) \;=\; f(\vct{x}_k) + \nabla f(\vct{x}_k)^\top \vct{d}_i + \tfrac{1}{2} \vct{d}_i^\top H \vct{d}_i + r_3(\vct{d}_i),
 \end{equation*}
-where $H := \nabla^2 f(\vct{x}_k)$ and $|r_3(\vct{d}_i)| = O(\|\vct{d}_i\|_2^3)$. When the observations $F_i = f(\vct{x}_i) + \mu(t_i) + \varepsilon_i$ are fitted by the linear terms $c + \vct{g}^\top \vct{d}_i + \gamma \theta_i$, the unmodeled spatial residual at sample $i$ is dominated by the quadratic form $q_i := \tfrac{1}{2}\vct{d}_i^\top H \vct{d}_i$. Unlike the independent observation noise $\varepsilon_i$, the curvature residuals $q_i$ and $q_j$ at two displacements $\vct{d}_i$ and $\vct{d}_j$ are spatially correlated through the shared Hessian $H$. The following result shows that under an isotropic prior on $H$, their covariance matrix is proportional to $A$.
+where $H := \nabla^2 f(\vct{x}_k)$ and $|r_3(\vct{d}_i)| = o(\|\vct{d}_i\|_2^2)$. When the observations $F_i = f(\vct{x}_i) + \mu(t_i) + \varepsilon_i$ are fitted by the linear terms $c + \vct{g}^\top \vct{d}_i + \gamma \theta_i$, the unmodeled spatial residual at sample $i$ is dominated by the quadratic form $q_i := \tfrac{1}{2}\vct{d}_i^\top H \vct{d}_i$. Unlike the independent observation noise $\varepsilon_i$, the curvature residuals $q_i$ and $q_j$ at two displacements $\vct{d}_i$ and $\vct{d}_j$ are spatially correlated through the shared Hessian $H$. The following result shows that under an isotropic prior on $H$, their covariance matrix is proportional to $A$.
 
 \begin{proposition}
 \label{prop:kernel-stat}
